@@ -4,129 +4,51 @@ import random
 
 NUM_RECORDS = 210
 
-# --- قاعدة المعرفة الموسعة بشكل كبير جدًا (النسخة الصحيحة) ---
+# --- قاعدة المعرفة النهائية والموسعة بشكل مضمون ---
 KNOWLEDGE_BASE = {
     "RegistryTools": {
         "detailed_queries": [
-            "A comprehensive explanation of tools for service registries.",
-            "Comparing features of HashiCorp Consul versus Netflix Eureka.",
-            "How can a Key-Value store like etcd be used for service discovery?",
-            "Best practices for leveraging DNS for service discovery in Kubernetes.",
-            "An overview of service mesh technologies like Istio and their role in discovery.",
-            "What are the core functionalities of a service registry?",
-            "Exploring Apache Zookeeper as a service discovery mechanism."
+            "A comprehensive explanation of tools for service registries like Consul and Eureka.", "Comparing features and architectures of HashiCorp Consul versus Netflix Eureka.", "How can a Key-Value store such as etcd or Zookeeper be effectively used to implement service discovery?", "What are the best practices for leveraging native DNS for service discovery within a Kubernetes cluster?", "An overview of service mesh technologies like Istio and their role in service discovery.", "What are the core functionalities of a modern service registry?", "Exploring Apache Zookeeper as a robust service discovery mechanism."
         ],
         "ground_truth_candidates": [
-            "Using HashiCorp Consul for dynamic service registration and health checking.",
-            "Implementing a registry with Netflix Eureka for Spring Boot applications.",
-            "Leveraging DNS-based service discovery natively within Kubernetes (Kube-DNS).",
-            "Using a distributed Key-Value store like etcd for discovery mechanisms.",
-            "Integrating a service mesh like Istio to handle service discovery and traffic management.",
-            "The role of Apache Zookeeper in coordinating distributed systems.",
-            "Core components of a service registry: registration, lookup, and health checking."
+            "Using HashiCorp Consul for dynamic service registration, health checking, and distributed Key-Value storage.", "Implementing a highly available service registry with Netflix Eureka for a fleet of Spring Boot applications.", "Leveraging the built-in DNS-based service discovery natively within Kubernetes (Kube-DNS/CoreDNS).", "Using a distributed Key-Value store like etcd as a foundational component for discovery mechanisms in large-scale systems.", "Integrating a service mesh like Istio or Linkerd to handle service discovery, routing, and traffic management.", "The role of Apache Zookeeper in coordinating distributed systems and managing configuration.", "Core components of a service registry: registration API, lookup API, and health checking."
         ],
-        "high_relevance": ["Configuring a Consul agent in client or server mode.", "Setting up a multi-node Eureka server cluster.", "The gossip protocol used by Consul.", "Integrating a registry with an API Gateway like Kong."],
-        "medium_relevance": ["Implementing /health endpoints in microservices.", "The CAP theorem in distributed systems.", "Dynamic configuration updates from the registry.", "Basics of gRPC for inter-service communication."],
-        "low_relevance": ["Manually updating a config file with IP addresses.", "Using a simple DNS A record.", "Hardcoding service endpoints in code.", "Fundamentals of TCP/IP networking."]
+        "high_relevance": ["Configuring a Consul agent in client or server mode for a production environment.", "Setting up a multi-node Eureka server cluster to ensure high availability.", "The gossip protocol used by Consul for cluster membership and failure detection.", "Integrating a service registry with an API Gateway like Kong or Traefik for dynamic routing."],
+        "medium_relevance": ["Implementing health check endpoints (/health) in microservices.", "Understanding the CAP theorem in the context of distributed systems.", "Pushing dynamic configuration updates from the service registry to clients.", "Basics of gRPC for efficient inter-service communication."],
+        "low_relevance": ["Manually updating a static configuration file with IP addresses.", "Using a simple DNS A record that points to a single service instance.", "Hardcoding service endpoints directly in the application source code.", "Fundamentals of TCP/IP networking and the OSI model."]
     },
     "DiscoveryPatterns": {
         "detailed_queries": [
-            "An analysis of common microservice discovery patterns.",
-            "Trade-offs between client-side and server-side discovery.",
-            "An architectural overview of how services locate each other.",
-            "A deep dive into the Service Registry architectural pattern.",
-            "How does the Sidecar pattern facilitate service discovery?",
-            "What is the role of a load balancer in server-side discovery?",
-            "Explaining the 'service discovery per host' pattern."
+            "An analysis of common microservice discovery patterns and their trade-offs.", "What are the fundamental differences between client-side and server-side discovery?", "An architectural overview of how services locate and communicate with each other in a distributed system.", "A deep dive into the Service Registry architectural pattern.", "How does the Sidecar pattern facilitate service discovery?", "What is the role of a load balancer in server-side discovery?", "Explaining the 'service discovery per host' or 'shared registry' pattern."
         ],
         "ground_truth_candidates": [
-            "A detailed comparison of Client-Side vs. Server-Side Discovery patterns.",
-            "Implementing the Client-Side Discovery pattern with a library like Netflix Ribbon.",
-            "Implementing the Server-Side Discovery pattern using a reverse proxy.",
-            "The role of the Service Registry in both discovery patterns.",
-            "Using the Sidecar pattern (e.g., with Envoy proxy) to abstract discovery logic.",
-            "How load balancers like NGINX or HAProxy enable server-side discovery.",
-            "The 'Service Discovery per Host' pattern using a local agent."
+            "A detailed comparison of Client-Side Discovery vs. Server-Side Discovery patterns and their primary use-cases.", "Implementing the Client-Side Discovery pattern effectively using a smart client library like Netflix Ribbon or Spring Cloud LoadBalancer.", "Implementing the Server-Side Discovery pattern using a reverse proxy, load balancer, or an API Gateway.", "The critical role of the Service Registry as a central component in both client-side and server-side discovery patterns.", "Using the Sidecar pattern (e.g., with Envoy proxy) to abstract discovery logic away from the application.", "How load balancers like NGINX or HAProxy enable server-side discovery.", "The 'Service Discovery per Host' pattern using a local agent."
         ],
-        "high_relevance": ["Trade-offs between patterns regarding complexity and performance.", "How API Gateways facilitate the Server-Side Discovery pattern.", "Challenges of discovery in multi-cloud environments.", "Service discovery in serverless architectures."],
-        "medium_relevance": ["The API Gateway pattern explained.", "The Circuit Breaker pattern for fault tolerance.", "Containerization of services using Docker.", "Orchestration with Kubernetes for managing services."],
-        "low_relevance": ["Designing a monolithic architecture.", "Direct database-to-database communication.", "Using a shared file system for communication.", "Writing a basic REST API with Flask."]
+        "high_relevance": ["An analysis of trade-offs between patterns regarding complexity, network hops, and performance.", "How modern API Gateways simplify the Server-Side Discovery pattern.", "Challenges of service discovery in multi-cloud or hybrid-cloud environments.", "Service discovery in serverless architectures."],
+        "medium_relevance": ["The API Gateway pattern explained with practical examples.", "The Circuit Breaker pattern for improving fault tolerance in distributed systems.", "Containerization of services using Docker for consistent environments.", "Orchestration with Kubernetes for managing the complete lifecycle of services."],
+        "low_relevance": ["Designing a traditional monolithic application architecture.", "Direct database-to-database communication between different applications.", "Using a shared file system for inter-application communication and data exchange.", "Writing a basic REST API with a simple framework like Flask or Express."]
     },
     "HealthChecking": {
         "detailed_queries": [
-            "Best practices for microservice health checking.",
-            "How do service registries use health check status information?",
-            "An overview of Kubernetes liveness and readiness probes.",
-            "Differentiating between active and passive health checks.",
-            "Implementing a custom /health endpoint in a service."
+            "Best practices for microservice health checking.", "How do service registries use health check status information?", "An overview of Kubernetes liveness and readiness probes.", "Differentiating between active and passive health checks.", "Implementing a custom /health endpoint in a service."
         ],
         "ground_truth_candidates": [
-            "Implementing robust health checking mechanisms for microservices.",
-            "Configuring active health checks by polling a dedicated HTTP /health endpoint.",
-            "Using passive health checks by monitoring for failed connections.",
-            "The distinct roles of Kubernetes Liveness, Readiness, and Startup probes.",
-            "How service registries use health status to dynamically update routing tables."
+            "Implementing robust health checking mechanisms for microservices to ensure system reliability.", "Configuring active health checks by polling a dedicated HTTP /health or /ping endpoint.", "Using passive health checks by having the service registry monitor for failed connections or errors.", "The distinct roles of Kubernetes Liveness, Readiness, and Startup probes in managing pod lifecycle.", "How service registries use health status to dynamically update routing tables."
         ],
-        "high_relevance": ["Automatic removal of unhealthy service instances.", "Implementing custom health check logic beyond a simple status check.", "The importance of setting correct timeouts for health checks.", "Graceful shutdown procedures for services."],
-        "medium_relevance": ["Centralized logging using the ELK stack.", "Distributed tracing with Jaeger or Zipkin.", "Metrics and monitoring with Prometheus and Grafana.", "Setting up alerting based on service health status."],
+        "high_relevance": ["Automatic removal of unhealthy service instances.", "Implementing custom health check logic beyond a simple status check.", "The importance of setting correct timeouts and intervals for health checks.", "Graceful shutdown procedures for services."],
+        "medium_relevance": ["Centralized logging using the ELK stack.", "Distributed tracing with Jaeger or Zipkin.", "Metrics and monitoring with Prometheus and Grafana.", "Setting up an alerting system based on service health status."],
         "low_relevance": ["Manually checking a service with 'ping'.", "Relying on user complaints to detect outages.", "Using 'print' statements for debugging.", "Basic shell scripting for server management."]
     },
     "APIGateway": {
         "detailed_queries": [
-            "The role of an API Gateway in a microservices architecture.",
-            "Comparing API Gateway tools like Kong, Traefik, and Spring Cloud Gateway.",
-            "How API Gateways integrate with service discovery mechanisms?",
-            "What are the benefits of using an API Gateway?",
-            "Explaining API composition and aggregation."
+            "The role of an API Gateway in a modern microservices architecture.", "Comparing API Gateway tools like Kong, Traefik, and Spring Cloud Gateway.", "How API Gateways integrate with service discovery mechanisms?", "What are the benefits of using an API Gateway?", "Explaining API composition and aggregation."
         ],
         "ground_truth_candidates": [
-            "Using an API Gateway as a single entry point for all clients.",
-            "Implementing routing and load balancing at the API Gateway level.",
-            "Offloading cross-cutting concerns like authentication to the API Gateway.",
-            "The API Gateway pattern vs. direct client-to-microservice communication.",
-            "Implementing the API Composition pattern for aggregating results from multiple services."
+            "Using an API Gateway as a single, unified entry point for all external clients.", "Implementing routing and load balancing for downstream services at the API Gateway level.", "Offloading cross-cutting concerns like authentication to the API Gateway.", "The API Gateway pattern vs. direct client-to-microservice communication.", "Implementing the API Composition pattern for aggregating results from multiple services."
         ],
-        "high_relevance": ["Using an API Gateway for protocol translation (e.g., REST to gRPC).", "Implementing rate limiting and throttling on the API Gateway.", "Integrating the API Gateway dynamically with a service registry.", "Securing microservices with an API Gateway using JWT validation."],
-        "medium_relevance": ["WebSockets vs. HTTP for real-time communication.", "Understanding RESTful API design principles.", "Securing APIs with OAuth 2.0 and OIDC.", "Introduction to message brokers like RabbitMQ or Kafka."],
+        "high_relevance": ["Using an API Gateway for protocol translation (e.g., external REST to internal gRPC).", "Implementing rate limiting and throttling on the API Gateway.", "Integrating the API Gateway dynamically with a service registry.", "Securing microservice APIs with an API Gateway using JWT validation."],
+        "medium_relevance": ["WebSockets vs. HTTP for real-time client-server communication.", "Understanding RESTful API design principles.", "Securing APIs with OAuth 2.0 and OIDC.", "Introduction to message brokers like RabbitMQ or Kafka."],
         "low_relevance": ["Building a simple web server with Node.js Express.", "Frontend development with React or Vue.", "SQL database design and normalization.", "Writing unit tests for a simple application."]
-    },
-    "Observability": {
-        "detailed_queries": [
-            "Understanding observability in distributed systems.",
-            "What are the three pillars of observability?",
-            "Comparing centralized logging, distributed tracing, and metrics.",
-            "How to implement distributed tracing for microservices?",
-            "What is structured logging and why is it important?"
-        ],
-        "ground_truth_candidates": [
-            "The three pillars of observability: logs, metrics, and traces.",
-            "Implementing distributed tracing with open-source tools like Jaeger or Zipkin.",
-            "Aggregating logs from multiple services using the ELK stack or Fluentd.",
-            "Monitoring microservices with Prometheus for metrics collection and Grafana for visualization.",
-            "Using structured logging (e.g., JSON format) for easier machine parsing."
-        ],
-        "high_relevance": ["Instrumenting application code to generate traces.", "The role of service meshes in providing observability.", "Correlation of logs, metrics, and traces for effective debugging.", "Setting up meaningful alerts based on SLOs and SLIs."],
-        "medium_relevance": ["The difference between monitoring and observability.", "Introduction to time-series databases like InfluxDB.", "Cloud provider monitoring solutions (e.g., AWS CloudWatch).", "Building effective dashboards in Grafana."],
-        "low_relevance": ["Reading log files manually on a server using 'tail' and 'grep'.", "Debugging with print statements.", "Using top/htop for real-time performance monitoring.", "Assuming services will never fail."]
-    },
-    "ConfigurationManagement": {
-        "detailed_queries": [
-            "How to manage configuration for hundreds of microservices?",
-            "Externalized configuration pattern explained.",
-            "What is a distributed configuration store?",
-            "Managing secrets in a microservices environment.",
-            "The role of feature flags in modern applications."
-        ],
-        "ground_truth_candidates": [
-            "Using a centralized, externalized configuration store like Spring Cloud Config Server or Consul KV.",
-            "The Externalized Configuration pattern for decoupling services from their config.",
-            "Managing secrets securely with a tool like HashiCorp Vault.",
-            "Injecting configuration into containers using Kubernetes ConfigMaps and Secrets.",
-            "Implementing feature flags or toggles to control feature rollouts."
-        ],
-        "high_relevance": ["Dynamic 'hot reloading' of configuration without service restarts.", "Versioning configuration alongside application code.", "Hierarchical configuration for different environments (dev, staging, prod).", "Client-side libraries for accessing centralized configuration."],
-        "medium_relevance": ["Using environment variables for configuration.", "Storing configuration in a version control system like Git.", "The 12-Factor App methodology for building modern applications.", "Introduction to GitOps principles."],
-        "low_relevance": ["Hardcoding configuration values directly in the source code.", "Storing configuration in a simple .properties or .ini file.", "Manually SSH-ing into servers to change configuration.", "Storing plain-text passwords in configuration files."]
     }
 }
 
@@ -146,7 +68,7 @@ def create_record_from_pair(query, ground_truth, concept_key):
     }
 
 def main():
-    print("Generating Final, Greatly Expanded, and Professional Semantic Dataset...")
+    print("Generating Final, Guaranteed, and Professional Semantic Dataset...")
     all_possible_pairs = []
     for concept_key, concept_data in KNOWLEDGE_BASE.items():
         for query in concept_data["detailed_queries"]:
