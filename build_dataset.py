@@ -1,7 +1,7 @@
 import json
 import random
 
-NUM_EXAMPLES = 250   # عدد الـ services المطلوبة (كل واحدة = 12 مثال)
+NUM_EXAMPLES = 250   # الهدف، لكن لو مش متاح هياخد المتاح
 
 QUERY_TEMPLATES = [
     "I need a service to handle {service} in my infrastructure",
@@ -26,8 +26,10 @@ def build_dataset(num_examples=NUM_EXAMPLES):
     github_services = load_github_repos()
     available_services = len(github_services)
 
+    # لو العدد المطلوب أكبر من المتاح → نستخدم المتاح
     if available_services < num_examples:
-        raise ValueError(f"⚠️ محتاج على الأقل {num_examples} خدمات (حاليًا {available_services})")
+        print(f"⚠️ مطلوب {num_examples} لكن المتاح {available_services} فقط → هنستخدم {available_services}")
+        num_examples = available_services
 
     dataset = []
     used_queries = set()
@@ -38,7 +40,7 @@ def build_dataset(num_examples=NUM_EXAMPLES):
         entry_examples = []
 
         for relevance in RELEVANCE_LEVELS:
-            for _ in range(4):   # 4 أمثلة لكل مستوى relevance
+            for _ in range(4):   # 4 لكل مستوى
                 query_template = random.choice(QUERY_TEMPLATES)
                 query = query_template.format(service=service)
 
@@ -58,7 +60,6 @@ def build_dataset(num_examples=NUM_EXAMPLES):
                 used_queries.add(query)
                 id_counter += 1
 
-        # check إن كل entry عنده 12 مثال
         assert len(entry_examples) == 12, f"Entry for {service} not complete!"
 
     with open("service_discovery_dataset.json", "w") as f:
