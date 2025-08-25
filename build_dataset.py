@@ -1,52 +1,100 @@
 import json
 import random
 
-# Load fetched GitHub repos
-with open("github_repos.json", "r", encoding="utf-8") as f:
-    repos = json.load(f)
+# قاعدة المعرفة (KNOWLEDGE_BASE)
+DISCOVERY_PATTERNS = [
+    "client-side discovery", "server-side discovery",
+    "service registry with Eureka", "service registry with Consul",
+    "Kubernetes DNS-based discovery", "API Gateway based discovery",
+    "service mesh (Istio, Linkerd)", "headless services in Kubernetes"
+]
 
+CONTEXTS = [
+    "microservices architecture", "serverless systems",
+    "multi-cloud environments", "hybrid cloud deployments",
+    "edge computing scenarios", "IoT networks",
+    "container orchestration with Kubernetes", "fault-tolerant systems"
+]
+
+CHALLENGES = [
+    "scalability", "latency", "network partitions",
+    "resilience", "observability", "fault tolerance",
+    "high availability", "dynamic scaling"
+]
+
+ACTIONS = [
+    "analyze", "evaluate", "compare", "critique",
+    "discuss", "optimize", "explain", "investigate"
+]
+
+LOW_TOPICS = [
+    "monolithic applications", "basic REST API design",
+    "direct database connections", "file-based configuration sharing",
+    "SQL joins optimization", "desktop application patterns"
+]
+
+def generate_query(i):
+    action = random.choice(ACTIONS)
+    pattern = random.choice(DISCOVERY_PATTERNS)
+    context = random.choice(CONTEXTS)
+    challenge = random.choice(CHALLENGES)
+
+    query = f"Q{i}: {action.capitalize()} how {pattern} addresses {challenge} in {context}, and contrast it with alternative discovery strategies."
+    ground_truth = (
+        f"This query examines the role of {pattern} within {context}. "
+        f"It specifically highlights {challenge} challenges and provides a comparison against at least one other discovery approach. "
+        f"The analysis should address trade-offs in scalability, resilience, and operational complexity."
+    )
+
+    return query, ground_truth, pattern, context, challenge
+
+def generate_relevance(pattern, context, challenge):
+    # High relevance = قريب جدًا من query
+    high = random.sample(DISCOVERY_PATTERNS, 4)
+    if pattern not in high:
+        high[0] = pattern
+
+    # Medium relevance = broader domain topics
+    medium = random.sample(CONTEXTS + CHALLENGES, 4)
+    if context not in medium:
+        medium[0] = context
+
+    # Low relevance = irrelevant topics
+    low = random.sample(LOW_TOPICS, 4)
+
+    return high, medium, low
+
+# ------------------------
+# بناء الـ dataset
+# ------------------------
 dataset = []
+used_queries = set()
+used_truths = set()
 
-for i, repo in enumerate(repos, start=1):
-    query = f"An architectural analysis of service discovery in {repo['name']} and how services locate each other."
-    description = f"A semantic evaluation record for the repository {repo['name']}."
-    ground_truth = f"A detailed exploration of {repo['name']} that compares client-side vs. server-side discovery mechanisms, scalability challenges, and fault tolerance strategies. Source: {repo['url']}"
+for i in range(1, 251):  # 250 queries
+    query, ground_truth, pattern, context, challenge = generate_query(i)
 
-    high_relevance = [
-        f"The '{repo['name']}' project demonstrates host-based service discovery patterns.",
-        "Challenges of discovery in heterogeneous or multi-cloud deployments.",
-        "How API Gateways facilitate the Server-Side Discovery approach.",
-        "Service discovery mechanisms in serverless and dynamic architectures."
-    ]
+    # تأكد من عدم التكرار
+    if query in used_queries or ground_truth in used_truths:
+        continue
 
-    medium_relevance = [
-        "The Circuit Breaker pattern for maintaining resilience.",
-        "Containerization strategies for service deployments.",
-        "Orchestration using Kubernetes for service management.",
-        "An overview of API Gateway design patterns."
-    ]
+    high, medium, low = generate_relevance(pattern, context, challenge)
 
-    low_relevance = [
-        "Monolithic architecture design considerations.",
-        "How to write a simple REST API with Flask.",
-        "Direct database-to-database communication challenges.",
-        "Using shared file systems for inter-process communication."
-    ]
-
-    dataset.append({
+    entry = {
         "query": query,
-        "description": description,
+        "description": f"A semantic evaluation record for query {i}.",
         "ground_truth": ground_truth,
-        "high_relevance": high_relevance,
-        "medium_relevance": medium_relevance,
-        "low_relevance": low_relevance
-    })
+        "high_relevance": high,
+        "medium_relevance": medium,
+        "low_relevance": low
+    }
 
-# نتاكد ان مفيش تكرار
-unique_dataset = {entry["query"]: entry for entry in dataset}
-final_dataset = list(unique_dataset.values())
+    dataset.append(entry)
+    used_queries.add(query)
+    used_truths.add(ground_truth)
 
+# حفظ الملف
 with open("service_discovery_dataset.json", "w", encoding="utf-8") as f:
-    json.dump(final_dataset, f, indent=4, ensure_ascii=False)
+    json.dump(dataset, f, indent=4, ensure_ascii=False)
 
-print("✅ Dataset generated: service_discovery_dataset.json")
+print(f"✅ Dataset generated with {len(dataset)} unique queries")
