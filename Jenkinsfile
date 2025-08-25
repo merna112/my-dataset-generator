@@ -6,13 +6,13 @@ pipeline {
     }
 
     stages {
-        stage('Install dependencies') {
-            steps {
-                sh '''
-                    pip3 install --user -r requirements.txt
-                '''
-            }
-        }
+       stage('Install dependencies') {
+    steps {
+        sh '''
+            pip3 install --break-system-packages -r requirements.txt
+        '''
+    }
+}
 
         stage('Fetch Data from GitHub') {
             steps {
