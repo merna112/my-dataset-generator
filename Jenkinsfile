@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Install dependencies') {
             steps {
-                sh 'pip3 install --user PyGithub'
+                sh 'pip3 install --user -r requirements.txt'
             }
         }
 
