@@ -4,92 +4,115 @@ import random
 
 NUM_RECORDS = 250
 
-CONCEPTS = {
-    "MachineLearning": {
-        "sub_topics": ["ImageRecognition", "Chatbot", "RecommendationEngine", "SentimentAnalysis"],
-        "tech_stack": ["Python", "TensorFlow", "PyTorch", "Scikit-learn"],
-        "search_tags": ["machine learning", "ai", "artificial intelligence", "prediction", "computer vision", "nlp", "chatbot"]
+# --- هذا هو "العقل" الجديد: كتالوج خدمات حقيقي ---
+SERVICE_CATALOG = {
+    "Authentication": {
+        "sub_services": ["UserLoginAPI", "TokenValidation", "PasswordReset", "OAuthProvider"],
+        "owner_team": "PlatformTeam",
+        "protocol": ["REST", "gRPC"],
+        "search_tags": ["auth", "login", "user", "sso", "jwt", "password"]
     },
-    "WebDevelopment": {
-        "sub_topics": ["E-commerceSite", "SocialNetwork", "BookingPlatform", "BlogEngine"],
-        "tech_stack": ["JavaScript", "React", "NodeJS", "Django", "SQL", "MongoDB"],
-        "search_tags": ["web", "website", "frontend", "backend", "full-stack", "e-commerce", "social media"]
+    "PaymentProcessing": {
+        "sub_services": ["StripeGateway", "PaypalConnector", "SubscriptionManager", "InvoiceGenerator"],
+        "owner_team": "FinTechTeam",
+        "protocol": ["REST"],
+        "search_tags": ["payment", "billing", "stripe", "invoice", "subscription", "charge"]
     },
-    "MobileDevelopment": {
-        "sub_topics": ["GameApp", "UtilityApp", "HealthTracker", "FoodDeliveryApp"],
-        "tech_stack": ["Kotlin", "Swift", "ReactNative", "Flutter"],
-        "search_tags": ["mobile", "android", "ios", "app", "game", "food delivery"]
+    "DataAnalytics": {
+        "sub_services": ["TrackingCollector", "MetricsDashboard", "AB_Testing_Engine", "DataWarehouseIngestor"],
+        "owner_team": "DataTeam",
+        "protocol": ["Kafka", "HTTP"],
+        "search_tags": ["analytics", "metrics", "tracking", "a/b test", "dashboard", "data"]
     },
-    "CyberSecurity": {
-        "sub_topics": ["Firewall", "PasswordManager", "VulnerabilityScanner", "SecureChat"],
-        "tech_stack": ["Python", "C++", "Cryptography"],
-        "search_tags": ["security", "cybersecurity", "encryption", "malware", "secure chat"]
-    },
-    "OperatingSystems": {
-        "sub_topics": ["CustomShell", "FileSystem", "ProcessScheduler"],
-        "tech_stack": ["C", "Assembly", "Rust"],
-        "search_tags": ["os", "operating system", "kernel", "scheduler", "file system"]
+    "NotificationService": {
+        "sub_services": ["EmailSender", "PushNotificationDispatcher", "SMS_Gateway", "WebhookService"],
+        "owner_team": "GrowthTeam",
+        "protocol": ["gRPC", "HTTP"],
+        "search_tags": ["notification", "email", "sms", "push", "alert"]
     }
 }
 
-RELATED_CONCEPTS = {
-    "MachineLearning": ["WebDevelopment"],
-    "WebDevelopment": ["CyberSecurity"],
-    "MobileDevelopment": ["WebDevelopment"]
-}
+def generate_service_name(domain, sub_service, protocol, team):
+    return f"{domain}-{sub_service}-{protocol}-{team}"
 
-def generate_project_name(concept, sub_topic, tech):
-    return f"{concept}-{sub_topic}-{tech}-{random.choice(['Alpha', 'Beta', 'Omega'])}"
+def create_unique_service_record(used_pairs):
+    while True:
+        domain_key = random.choice(list(SERVICE_CATALOG.keys()))
+        domain_info = SERVICE_CATALOG[domain_key]
+        
+        sub_service = random.choice(domain_info["sub_services"])
+        protocol = random.choice(domain_info["protocol"])
+        team = domain_info["owner_team"]
+        status = random.choice(["PRODUCTION", "BETA", "DEPRECATED"])
+        
+        # --- 2. فصل Query عن Description ---
+        query = f"{random.choice(domain_info['search_tags'])} {random.choice(['service', 'api'])}"
+        description = f"Official microservice for {sub_service.replace('_', ' ')}. Owner: {team}. Protocol: {protocol}. Status: {status}."
+        
+        # --- 4. ضمان عدم التكرار ---
+        if (query, description) not in used_pairs:
+            used_pairs.add((query, description))
+            break
 
-def create_cse_record():
-    concept_key = random.choice(list(CONCEPTS.keys()))
-    concept_info = CONCEPTS[concept_key]
+    ground_truth = generate_service_name(domain_key, sub_service, protocol, team)
     
-    sub_topic = random.choice(concept_info["sub_topics"])
-    tech = random.choice(concept_info["tech_stack"])
-    
-    ground_truth = generate_project_name(concept_key, sub_topic, tech)
-    
-    query = f"ideas for {random.choice(concept_info['search_tags'])} graduation project"
-    description = f"A university project on {sub_topic.replace('_', ' ')} using {tech}, falling under the {concept_key} domain."
-    
-    high_relevance = {generate_project_name(concept_key, sub_topic, t) for t in concept_info["tech_stack"] if t != tech}
-    high_relevance.update({generate_project_name(concept_key, st, tech) for st in concept_info["sub_topics"] if st != sub_topic})
-    
+    # --- 1. ضمان 4 نتائج لكل مستوى ---
+    high_relevance = set()
+    while len(high_relevance) < 4:
+        alt_protocol = random.choice([p for p in domain_info["protocol"] if p != protocol] or [protocol])
+        alt_sub_service = random.choice([s for s in domain_info["sub_services"] if s != sub_service] or [sub_service])
+        high_relevance.add(generate_service_name(domain_key, sub_service, alt_protocol, team))
+        high_relevance.add(generate_service_name(domain_key, alt_sub_service, protocol, team))
+        high_relevance.discard(ground_truth)
+
     medium_relevance = set()
-    for related_key in RELATED_CONCEPTS.get(concept_key, []):
-        related_info = CONCEPTS[related_key]
-        medium_relevance.add(generate_project_name(related_key, random.choice(related_info["sub_topics"]), random.choice(related_info["tech_stack"])))
-    
+    while len(medium_relevance) < 4:
+        alt_domain_key = random.choice([d for d in SERVICE_CATALOG.keys() if d != domain_key])
+        alt_domain_info = SERVICE_CATALOG[alt_domain_key]
+        medium_relevance.add(generate_service_name(
+            alt_domain_key, 
+            random.choice(alt_domain_info["sub_services"]),
+            random.choice(alt_domain_info["protocol"]),
+            alt_domain_info["owner_team"]
+        ))
+        
     low_relevance = set()
-    unrelated_keys = [k for k in CONCEPTS if k != concept_key and k not in RELATED_CONCEPTS.get(concept_key, [])]
-    if unrelated_keys:
-        low_key = random.choice(unrelated_keys)
-        low_info = CONCEPTS[low_key]
-        low_relevance.add(generate_project_name(low_key, random.choice(low_info["sub_topics"]), random.choice(low_info["tech_stack"])))
+    unrelated_domains = [d for d in SERVICE_CATALOG.keys() if d != domain_key]
+    while len(low_relevance) < 4 and unrelated_domains:
+        low_domain = random.choice(unrelated_domains)
+        low_info = SERVICE_CATALOG[low_domain]
+        low_relevance.add(generate_service_name(
+            low_domain, 
+            random.choice(low_info["sub_services"]),
+            random.choice(low_info["protocol"]),
+            low_info["owner_team"]
+        ))
 
     return {
         "query": query,
         "description": description,
         "ground_truth": ground_truth,
-        "tags": concept_info['search_tags'],
         "high_relevance": list(high_relevance)[:4],
         "medium_relevance": list(medium_relevance)[:4],
         "low_relevance": list(low_relevance)[:4],
     }
 
 def main():
-    dataset = [create_cse_record() for _ in range(NUM_RECORDS)]
-    
-    output_dir = 'cse_evaluation_data'
+    print("Generating Final Service Discovery Dataset...")
+    dataset = []
+    used_pairs = set()
+    while len(dataset) < NUM_RECORDS:
+        dataset.append(create_unique_service_record(used_pairs))
+
+    output_dir = 'service_discovery_data'
     if not os.path.exists(output_dir): os.makedirs(output_dir)
             
-    output_path = os.path.join(output_dir, 'cse_project_queries.json')
+    output_path = os.path.join(output_dir, 'service_catalog_queries.json')
     
     with open(output_path, 'w') as f:
         json.dump(dataset, f, indent=4)
     
-    print(f"\nDataset saved to: {output_path}")
+    print(f"\nFinal dataset saved to: {output_path}")
 
 if __name__ == "__main__":
     main()
