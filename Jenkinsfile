@@ -7,17 +7,17 @@ pipeline {
                 sh 'pip install pandas --break-system-packages'
             }
         }
-        stage('Generate Service Discovery Dataset') {
+        stage('Generate and Debug Dataset') {
             steps {
-                // --- هذا هو السطر الذي تم تعديله ---
-                sh 'nohup python3 generate_service_discovery_dataset.py &'
+                // شغّل السكريبت واكتب كل مخرجاته وأخطائه في ملف اسمه script.log
+                sh 'python3 generate_service_discovery_dataset.py > script.log 2>&1'
             }
         }
-        stage('Archive Dataset') {
+        stage('Display Log and Archive') {
             steps {
-                // ننتظر قليلاً للتأكد من أن السكريبت قد انتهى قبل الأرشفة
-                sleep 5 
-                archiveArtifacts artifacts: 'service_discovery_data/*.json', followSymlinks: false
+                // اعرض محتويات ملف السجل لنرى الخطأ الحقيقي
+                sh 'cat script.log'
+                archiveArtifacts artifacts: 'service_discovery_data/*.json', allowEmptyArchive: true
             }
         }
     }
