@@ -1,90 +1,209 @@
-import json
-import os
+import pandas as pd
 import random
+import json
 
-NUM_RECORDS = 210
+def generate_dataset(num_queries_per_category=70):
+    # Extended lists for more variety and longer descriptions
+    jenkins_concepts = [
+        "CI/CD pipeline automation", "Continuous Integration", "Continuous Delivery",
+        "Automated testing", "Deployment automation", "Code quality analysis",
+        "Security scanning", "Artifact management", "Notification systems",
+        "Distributed builds", "Dynamic agent provisioning", "Version control integration",
+        "Credential management", "Monitoring and reporting", "Orchestration of complex workflows",
+        "Infrastructure as Code (IaC) for pipelines", "Multi-branch pipeline support",
+        "Containerized build environments", "Cloud-native deployments", "DevOps practices enforcement"
+    ]
 
-# --- قاعدة المعرفة الموسعة بشكل جنوني لضمان النجاح ---
-KNOWLEDGE_BASE = {
-    "RegistryTools": {
-        "detailed_queries": ["tools for service registries", "consul vs eureka", "etcd for service discovery", "dns in kubernetes for discovery", "service mesh and discovery", "core functions of a registry", "zookeeper for discovery", "comparing discovery tools"],
-        "ground_truth_candidates": ["using hashicorp consul for registration and health checking", "implementing a registry with netflix eureka", "leveraging dns-based discovery in kubernetes", "using etcd as a key-value store for discovery", "integrating istio to handle discovery", "the role of apache zookeeper in coordination", "core components of a service registry api", "a survey of modern service discovery tools"],
-        "high_relevance": ["configuring a consul agent", "setting up a multi-node eureka cluster", "the gossip protocol in consul", "integrating a registry with an api gateway"],
-        "medium_relevance": ["implementing /health endpoints", "the cap theorem", "dynamic configuration updates", "basics of grpc"],
-        "low_relevance": ["manual config file updates", "using a simple dns a record", "hardcoding service endpoints", "tcp/ip fundamentals"]
-    },
-    "DiscoveryPatterns": {
-        "detailed_queries": ["microservice discovery patterns analysis", "client-side vs server-side discovery", "how services locate each other", "the service registry pattern deep-dive", "sidecar pattern for discovery", "load balancer role in discovery", "service discovery per host pattern", "shared registry pattern"],
-        "ground_truth_candidates": ["a comparison of client-side vs. server-side discovery patterns", "implementing client-side discovery with netflix ribbon", "implementing server-side discovery with a reverse proxy", "the role of the service registry in discovery patterns", "using the sidecar pattern with envoy proxy", "how load balancers enable server-side discovery", "the 'service discovery per host' pattern with a local agent", "the shared registry pattern explained"],
-        "high_relevance": ["trade-offs between patterns in complexity and performance", "how api gateways simplify server-side discovery", "challenges of discovery in multi-cloud environments", "service discovery in serverless architectures"],
-        "medium_relevance": ["the api gateway pattern", "the circuit breaker pattern", "containerization with docker", "orchestration with kubernetes"],
-        "low_relevance": ["designing a monolithic architecture", "direct database-to-database communication", "using a shared file system", "writing a basic rest api"]
-    },
-    "HealthChecking": {
-        "detailed_queries": ["microservice health checking best practices", "how registries use health checks", "kubernetes liveness and readiness probes", "active vs passive health checks", "implementing a custom /health endpoint"],
-        "ground_truth_candidates": ["implementing robust health checking mechanisms", "configuring active health checks via http polling", "using passive health checks by monitoring connections", "the roles of kubernetes liveness, readiness, and startup probes", "how registries use health status to update routing"],
-        "high_relevance": ["automatic removal of unhealthy instances", "implementing custom health check logic", "setting correct timeouts for health checks", "graceful shutdown procedures"],
-        "medium_relevance": ["centralized logging with the elk stack", "distributed tracing with jaeger", "metrics and monitoring with prometheus", "alerting based on service health"],
-        "low_relevance": ["manual checking with 'ping'", "relying on user complaints", "debugging with 'print' statements", "basic shell scripting"]
-    },
-    "APIGateway": {
-        "detailed_queries": ["role of an api gateway in microservices", "comparing api gateway tools", "api gateways and service discovery integration", "benefits of using an api gateway", "api composition and aggregation"],
-        "ground_truth_candidates": ["using an api gateway as a single entry point", "implementing routing and load balancing at the gateway", "offloading cross-cutting concerns to the gateway", "api gateway pattern vs. direct client communication", "implementing the api composition pattern"],
-        "high_relevance": ["using a gateway for protocol translation", "implementing rate limiting and throttling", "integrating the gateway with a service registry", "securing microservices with a gateway and jwt"],
-        "medium_relevance": ["websockets vs. http", "restful api design principles", "securing apis with oauth 2.0", "introduction to message brokers"],
-        "low_relevance": ["building a simple web server with express", "frontend development with react", "sql database design", "writing unit tests"]
-    }
-}
+    common_plugins_high = [
+        {"name": "Git Plugin", "desc": "for managing Git repositories, pulling code, and tracking changes.", "use_case": "automating build and test processes with every code change."},
+        {"name": "Pipeline Plugin", "desc": "for building complex pipelines as \'code\' (Jenkinsfile) for complete CI/CD cycles.", "use_case": "defining build, deploy, and test stages programmatically and sequentially."},
+        {"name": "Blue Ocean Plugin", "desc": "for a modern, intuitive user interface to visualize and manage pipelines.", "use_case": "improving user experience and easily tracking pipeline status."},
+        {"name": "Kubernetes Plugin", "desc": "for dynamically running Jenkins agents on Kubernetes clusters.", "use_case": "automatically scaling the build environment and efficiently using Kubernetes resources."},
+        {"name": "SonarQube Scanner", "desc": "for static code quality analysis and identifying security issues and programming errors.", "use_case": "ensuring continuous code quality and preventing the introduction of bugs."},
+        {"name": "Jira Plugin", "desc": "for linking Jenkins with Jira to track tasks and display build status in Jira.", "use_case": "improving coordination between development teams and project management."},
+        {"name": "Slack Notification Plugin", "desc": "for sending build status notifications to Slack channels.", "use_case": "keeping the team informed about CI/CD operations status."},
+        {"name": "Credentials Binding Plugin", "desc": "for securely managing sensitive credentials (like passwords and API keys) within Jenkins.", "use_case": "providing a secure way to use secrets in build jobs."},
+        {"name": "JUnit Plugin", "desc": "for analyzing and displaying JUnit test results graphically and in detail.", "use_case": "monitoring test results and quickly identifying issues."},
+        {"name": "Maven Integration Plugin", "desc": "for advanced integration of Maven projects with Jenkins, including incremental builds.", "use_case": "improving the performance of Maven project builds."},
+        {"name": "Docker Plugin", "desc": "for running build jobs inside isolated Docker containers.", "use_case": "ensuring consistent and repeatable build environments."},
+        {"name": "Ansible Plugin", "desc": "for running Ansible playbooks from Jenkins for configuration management and deployment automation.", "use_case": "automating deployment operations and infrastructure management."},
+        {"name": "GitHub Integration Plugin", "desc": "for deep integration with GitHub, including triggering builds on GitHub events.", "use_case": "connecting Jenkins with GitHub workflow for CI/CD."},
+        {"name": "Pipeline: Multibranch Plugin", "desc": "for automatically discovering branches and creating pipelines for each branch in the repository.", "use_case": "efficiently managing CI/CD for multiple branches."},
+        {"name": "Docker Pipeline Plugin", "desc": "for building, running, and managing Docker containers as part of your Jenkins pipeline.", "use_case": "incorporating Docker operations into CI/CD pipelines."},
+        {"name": "Amazon EC2 Plugin", "desc": "for dynamically provisioning Jenkins agents on Amazon EC2.", "use_case": "scaling build resources in the cloud."},
+        {"name": "Email Extension Plugin", "desc": "for sending customized and detailed email notifications after a build completes.", "use_case": "customizing build reports sent via email."},
+        {"name": "Role-based Authorization Strategy", "desc": "for managing permissions and access control based on roles.", "use_case": "implementing precise security policies in Jenkins."},
+        {"name": "Timestamper Plugin", "desc": "for adding timestamps to build log output.", "use_case": "improving readability of build logs and tracking events."},
+        {"name": "Parameterized Trigger Plugin", "desc": "for conditionally triggering other jobs with parameter passing.", "use_case": "building complex job chains that depend on each other."}
+    ]
 
-def create_record_from_pair(query, ground_truth, concept_key):
-    concept_data = KNOWLEDGE_BASE[concept_key]
-    high_relevance_pool = [item for item in concept_data["high_relevance"] if item != ground_truth]
-    high_relevance_list = random.sample(high_relevance_pool, min(len(high_relevance_pool), 4))
-    medium_relevance_list = random.sample(concept_data["medium_relevance"], 4)
-    low_relevance_list = random.sample(concept_data["low_relevance"], 4)
-    return {
-        "query": query,
-        "description": f"A semantic evaluation record for the concept: {concept_key}.",
-        "ground_truth": ground_truth,
-        "high_relevance": high_relevance_list,
-        "medium_relevance": medium_relevance_list,
-        "low_relevance": low_relevance_list,
-    }
+    common_plugins_medium = [
+        {"name": "Copy Artifact Plugin", "desc": "for copying artifacts from one build job to another.", "use_case": "reusing build outputs in subsequent jobs."},
+        {"name": "Disk Usage Plugin", "desc": "for monitoring disk space consumption by Jenkins.", "use_case": "managing storage space on the Jenkins server."},
+        {"name": "Build Blocker Plugin", "desc": "for preventing certain jobs from starting if other jobs are running.", "use_case": "avoiding build conflicts."},
+        {"name": "Workspace Cleanup Plugin", "desc": "for cleaning up workspaces after builds complete.", "use_case": "maintaining disk space and organizing the build environment."},
+        {"name": "Rebuild Plugin", "desc": "for re-running a previous build job with the same parameters.", "use_case": "facilitating retesting of fixes or redeployments."},
+        {"name": "HTML Publisher Plugin", "desc": "for publishing HTML reports (e.g., coverage or test reports) on the build results page.", "use_case": "displaying interactive test results and reports."},
+        {"name": "OWASP Dependency-Check Plugin", "desc": "for analyzing project dependencies for known security vulnerabilities.", "use_case": "improving application security by scanning dependencies."},
+        {"name": "Build Pipeline View", "desc": "for graphically displaying sequential pipelines.", "use_case": "visualizing the build flow across multiple jobs."},
+        {"name": "Active Directory Plugin", "desc": "for integration with Active Directory for authentication and user management.", "use_case": "managing users in Jenkins using Active Directory."},
+        {"name": "LDAP Plugin", "desc": "for integration with LDAP servers for authentication and user management.", "use_case": "managing users in Jenkins using LDAP."},
+        {"name": "Configuration as Code Plugin", "desc": "for defining Jenkins settings as code, simplifying configuration management.", "use_case": "managing Jenkins configuration in a traceable and version-controlled manner."},
+        {"name": "Job DSL Plugin", "desc": "for defining Jenkins jobs using a Domain Specific Language (DSL) in Groovy.", "use_case": "programmatically creating Jenkins jobs."},
+        {"name": "Prometheus Plugin", "desc": "for exporting Jenkins metrics to Prometheus for monitoring.", "use_case": "monitoring Jenkins performance using Prometheus."},
+        {"name": "Metrics Plugin", "desc": "for providing internal metrics for Jenkins performance.", "use_case": "analyzing Jenkins performance."},
+        {"name": "Safe Restart Plugin", "desc": "for safely restarting Jenkins after all ongoing jobs have completed.", "use_case": "restarting Jenkins without interrupting jobs."}
+    ]
 
-def main():
-    print("Generating Final, Guaranteed 210 Records Dataset...")
-    all_possible_pairs = []
-    for concept_key, concept_data in KNOWLEDGE_BASE.items():
-        for query in concept_data["detailed_queries"]:
-            for ground_truth in concept_data["ground_truth_candidates"]:
-                all_possible_pairs.append((query, ground_truth, concept_key))
-    
-    random.shuffle(all_possible_pairs)
-    
-    dataset = []
-    # --- هذا هو المنطق الجديد والمضمون ---
-    # نأخذ كل الأزواج الفريدة المتاحة أولاً
-    unique_pairs_to_use = all_possible_pairs
-    
-    # ننشئ السجلات من الأزواج الفريدة
-    for q, gt, ck in unique_pairs_to_use:
-        dataset.append(create_record_from_pair(q, gt, ck))
-        
-    # إذا لم نصل إلى 210، نكرر من البداية بشكل عشوائي حتى نصل
-    while len(dataset) < NUM_RECORDS:
-        q, gt, ck = random.choice(all_possible_pairs)
-        dataset.append(create_record_from_pair(q, gt, ck))
-        
-    # نأخذ فقط أول 210 سجل لضمان العدد المطلوب بالضبط
-    final_dataset = dataset[:NUM_RECORDS]
-    random.shuffle(final_dataset) # نخلط الترتيب النهائي
-    
-    output_dir = 'service_discovery_semantic_data'
-    if not os.path.exists(output_dir): os.makedirs(output_dir)
-    output_path = os.path.join(output_dir, 'service_discovery_semantic_queries.json')
-    with open(output_path, 'w') as f:
-        json.dump(final_dataset, f, indent=4)
-    print(f"\nProfessional dataset with exactly {len(final_dataset)} records saved to: {output_path}")
+    common_plugins_low = [
+        {"name": "Simple Theme Plugin", "desc": "for customizing the Jenkins UI appearance using CSS and JavaScript.", "use_case": "changing colors, fonts, and logos in Jenkins."},
+        {"name": "Locale Plugin", "desc": "for changing the Jenkins UI language.", "use_case": "changing Jenkins language to Arabic or any other language."},
+        {"name": "Timestamper Plugin", "desc": "for adding timestamps to build log output.", "use_case": "improving readability of build logs."},
+        {"name": "Dashboard View", "desc": "for creating custom dashboards to display job status.", "use_case": "creating a custom dashboard for CI/CD jobs."},
+        {"name": "Build Monitor Plugin", "desc": "for displaying build status on a large screen.", "use_case": "real-time monitoring of build status on a display screen."},
+        {"name": "Folder Plugin", "desc": "for organizing jobs and projects within folders.", "use_case": "organizing a large number of Jenkins jobs."},
+        {"name": "Green Balls Plugin", "desc": "for changing the color of build status balls from blue to green for success.", "use_case": "changing visual icons for build results."},
+        {"name": "Global Build Stats Plugin", "desc": "for displaying general statistics about build operations.", "use_case": "getting an overview of build performance."},
+        {"name": "Build Failure Analyzer", "desc": "for analyzing build logs and identifying common causes of failure.", "use_case": "automatically diagnosing reasons for build failures."},
+        {"name": "Sidebar Link Plugin", "desc": "for adding custom links to the Jenkins sidebar.", "use_case": "adding quick links to external tools."}
+    ]
+
+    # Extended lists for query generation
+    actions = [
+        "automate", "integrate", "monitor", "optimize", "manage", "secure", "deploy", "build", "test",
+        "track", "customize", "organize", "scale", "send notifications", "analyze", "clean up",
+        "link", "dynamically provision", "define", "execute"
+    ]
+
+    problems = [
+        "slow and complex build process", "difficulty tracking deployment status", "code quality issues",
+        "manual repetition of operations", "unstable build environments", "difficulty managing credentials",
+        "lack of visibility into CI/CD performance", "excessive resource consumption", "difficulty in team collaboration",
+        "delay in error detection", "outdated and unintuitive user interface", "inability to scale",
+        "dependency security issues", "difficulty deploying applications to Kubernetes", "lack of instant notifications",
+        "build job conflicts", "disorganized jobs", "difficulty analyzing build logs",
+        "need for consistent build environments", "configuration management issues"
+    ]
+
+    goals = [
+        "achieve full CI/CD", "ensure code quality", "accelerate development cycle",
+        "improve application security", "streamline deployment processes", "provide reliable build environments",
+        "enhance team collaboration", "reduce human errors", "improve scalability",
+        "gain comprehensive visibility into DevOps operations", "customize user experience",
+        "automate infrastructure management", "effectively track changes", "securely manage sensitive data",
+        "provide detailed reports", "organize large projects", "improve Jenkins performance itself",
+        "facilitate troubleshooting", "integrate Jenkins with external tools"
+    ]
+
+    contexts = [
+        "in a large development environment relying on microservices",
+        "when working on a Java project using Maven",
+        "in a DevOps team applying Agile methodologies",
+        "to improve the CI/CD workflow for a Node.js application",
+        "when deploying applications to a Kubernetes cluster",
+        "to ensure security compliance in the development lifecycle",
+        "in a cloud environment using AWS EC2",
+        "for managing multi-branch projects in a Git repository",
+        "when instant notifications via Slack are needed",
+        "to visually analyze test results",
+        "in an environment requiring precise permission management",
+        "to automate routine Jenkins maintenance tasks",
+        "when isolated build environments using Docker are needed",
+        "to simplify Jenkins configuration itself",
+        "in a project requiring precise tracking of resource consumption"
+    ]
+
+    query_templates = [
+        "How can I {action} {jenkins_concept} for {problem} {context}?",
+        "I\'m looking for a way to {action} {jenkins_concept} with the goal of {goal}, especially {context}. What is the appropriate tool or plugin?",
+        "I have a problem with {problem} and I want to {action} {jenkins_concept} to achieve {goal}. Is there an effective solution in Jenkins?",
+        "How can I {action} {jenkins_concept} more effectively? I\'m currently facing {problem} and I want to {goal} {context}. What are the recommendations?",
+        "I want to {action} {jenkins_concept} for {goal}. What are the best practices or plugins that can help me in {context}?",
+        "What plugin helps me to {action} {jenkins_concept}? I\'m working on {context} and I need to {goal}.",
+        "How can I solve the {problem} issue using Jenkins? I want to {action} {jenkins_concept} to achieve {goal}.",
+        "I need to {action} {jenkins_concept} in a {context} environment, and how can I ensure {goal}?",
+        "What are the essential plugins I should use to {action} {jenkins_concept} and achieve {goal} in the context of {context}?",
+        "How can I improve {jenkins_concept} to avoid {problem} and achieve {goal} in the context of {context}?"
+    ]
+
+    data = []
+    generated_queries = set()
+    generated_ground_truths = set()
+
+    # Function to generate a unique query and ground truth
+    def generate_unique_entry(relevance_category, plugins_list):
+        max_attempts = 1000 # Prevent infinite loops for very restrictive conditions
+        attempts = 0
+        while attempts < max_attempts:
+            concept = random.choice(jenkins_concepts)
+            action = random.choice(actions)
+            problem = random.choice(problems)
+            goal = random.choice(goals)
+            context = random.choice(contexts)
+            plugin_info = random.choice(plugins_list)
+
+            query = random.choice(query_templates).format(
+                action=action, jenkins_concept=concept, problem=problem, goal=goal, context=context
+            )
+            # Ensure query is long enough and unique
+            if len(query) < 100 or query in generated_queries:
+                attempts += 1
+                continue
+
+            ground_truth = f"Using {plugin_info[\'name\']} {plugin_info[\'desc\']} This will help you with {plugin_info[\'use_case\']} to {action} {concept} and achieve {goal}."
+            # Ensure ground truth is long enough and unique
+            if len(ground_truth) < 100 or ground_truth in generated_ground_truths:
+                attempts += 1
+                continue
+
+            generated_queries.add(query)
+            generated_ground_truths.add(ground_truth)
+            return {"query": query, "ground_truth": ground_truth, "relevance": relevance_category}
+        return None # Return None if unable to generate a unique entry after max_attempts
+
+    # Generate entries for each category
+    # Aim for slightly more than needed to ensure we hit the 200+ mark and have enough for shuffling
+    target_per_category = max(num_queries_per_category, 70) # Ensure at least 70 per category for 210 total
+
+    high_entries = []
+    medium_entries = []
+    low_entries = []
+
+    for _ in range(target_per_category):
+        entry = generate_unique_entry("high", common_plugins_high)
+        if entry: high_entries.append(entry)
+
+        entry = generate_unique_entry("medium", common_plugins_medium)
+        if entry: medium_entries.append(entry)
+
+        entry = generate_unique_entry("low", common_plugins_low)
+        if entry: low_entries.append(entry)
+
+    # Ensure at least 4 of each category are present
+    while len(high_entries) < 4:
+        entry = generate_unique_entry("high", common_plugins_high)
+        if entry: high_entries.append(entry)
+
+    while len(medium_entries) < 4:
+        entry = generate_unique_entry("medium", common_plugins_medium)
+        if entry: medium_entries.append(entry)
+
+    while len(low_entries) < 4:
+        entry = generate_unique_entry("low", common_plugins_low)
+        if entry: low_entries.append(entry)
+
+    data = high_entries + medium_entries + low_entries
+
+    # Shuffle the dataset
+    random.shuffle(data)
+
+    # Save to JSON
+    output_filename = "jenkins_service_discovery_dataset.json"
+    with open(output_filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    print(f"Dataset generated successfully with {len(data)} entries. Saved to {output_filename}")
 
 if __name__ == "__main__":
-    main()
+    # To get more than 200 queries, ensure num_queries_per_category * 3 > 200
+    # For example, 70 * 3 = 210 queries. This value is passed to the function.
+    generate_dataset(num_queries_per_category=70)
