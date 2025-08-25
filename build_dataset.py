@@ -1,7 +1,7 @@
 import json
 import random
 
-NUM_EXAMPLES = 250
+NUM_EXAMPLES = 250   # عدد الـ services المطلوبة (كل واحدة = 12 مثال)
 
 QUERY_TEMPLATES = [
     "I need a service to handle {service} in my infrastructure",
@@ -10,6 +10,9 @@ QUERY_TEMPLATES = [
     "What’s the best choice for managing {service}?",
     "Is there a reliable solution for {service} available?",
     "We’re planning to add {service}, what should we use?",
+    "Looking for recommendations to implement {service} efficiently",
+    "Any open-source project that solves {service}?",
+    "Best practices around {service} in enterprise systems?",
 ]
 
 RELEVANCE_LEVELS = ["high", "medium", "low"]
@@ -23,53 +26,46 @@ def build_dataset(num_examples=NUM_EXAMPLES):
     github_services = load_github_repos()
     available_services = len(github_services)
 
-    print(f"📥 Loaded {available_services} services from GitHub")
-
     if available_services < num_examples:
-        print(f"⚠️ Requested {num_examples} but only {available_services} available")
-        num_examples = available_services
+        raise ValueError(f"⚠️ محتاج على الأقل {num_examples} خدمات (حاليًا {available_services})")
 
     dataset = []
     used_queries = set()
-
     random.shuffle(github_services)
 
-    relevance_cycle = []
-    # وزّع التكرار: 4 High + 4 Medium + 4 Low
-    relevance_cycle.extend(["high"] * 4)
-    relevance_cycle.extend(["medium"] * 4)
-    relevance_cycle.extend(["low"] * 4)
+    id_counter = 1
+    for service in github_services[:num_examples]:
+        entry_examples = []
 
-    idx = 0
-    for i, service in enumerate(github_services[:num_examples]):
-        query_template = random.choice(QUERY_TEMPLATES)
-        query = query_template.format(service=service)
+        for relevance in RELEVANCE_LEVELS:
+            for _ in range(4):   # 4 أمثلة لكل مستوى relevance
+                query_template = random.choice(QUERY_TEMPLATES)
+                query = query_template.format(service=service)
 
-        while query in used_queries:  # ضمان عدم التكرار
-            query_template = random.choice(QUERY_TEMPLATES)
-            query = query_template.format(service=service)
+                while query in used_queries:  # ضمان عدم التكرار
+                    query_template = random.choice(QUERY_TEMPLATES)
+                    query = query_template.format(service=service)
 
-        relevance = relevance_cycle[idx % len(relevance_cycle)]  # توزيع مضبوط
-        idx += 1
+                example = {
+                    "id": id_counter,
+                    "query": query,
+                    "ground_truth": service,
+                    "relevance": relevance
+                }
 
-        example = {
-            "id": i + 1,
-            "query": query,
-            "ground_truth": service,
-            "relevance": relevance
-        }
+                entry_examples.append(example)
+                dataset.append(example)
+                used_queries.add(query)
+                id_counter += 1
 
-        dataset.append(example)
-        used_queries.add(query)
+        # check إن كل entry عنده 12 مثال
+        assert len(entry_examples) == 12, f"Entry for {service} not complete!"
 
     with open("service_discovery_dataset.json", "w") as f:
         json.dump(dataset, f, indent=2, ensure_ascii=False)
 
-    print(f"✅ Dataset built: {len(dataset)} examples")
-    print("📊 Distribution check:")
-    print("High:", sum(1 for e in dataset if e["relevance"] == "high"))
-    print("Medium:", sum(1 for e in dataset if e["relevance"] == "medium"))
-    print("Low:", sum(1 for e in dataset if e["relevance"] == "low"))
+    print(f"✅ Dataset built: {len(dataset)} queries for {num_examples} services")
+    print(f"📊 Each entry = 12 queries (4 high, 4 medium, 4 low)")
 
 if __name__ == "__main__":
     build_dataset()
