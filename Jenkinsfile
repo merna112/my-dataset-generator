@@ -2,10 +2,16 @@ pipeline {
     agent any
 
     environment {
-        GITHUB_TOKEN = credentials('github_token')  
+        GITHUB_TOKEN = credentials('github_token')
     }
 
     stages {
+        stage('Install dependencies') {
+            steps {
+                sh 'pip3 install --user PyGithub'
+            }
+        }
+
         stage('Fetch Data from GitHub') {
             steps {
                 sh 'python3 fetch_github_data.py'
