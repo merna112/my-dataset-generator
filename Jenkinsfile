@@ -1,10 +1,20 @@
 pipeline {
     agent any
 
+    environment {
+        GITHUB_TOKEN = credentials('github_token')  
+    }
+
     stages {
-        stage('Generate Dataset') {
+        stage('Fetch Data from GitHub') {
             steps {
-                sh 'python3 generate_dataset.py'
+                sh 'python3 fetch_github_data.py'
+            }
+        }
+
+        stage('Build Dataset') {
+            steps {
+                sh 'python3 build_dataset.py'
             }
         }
 
