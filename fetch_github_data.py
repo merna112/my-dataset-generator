@@ -1,25 +1,50 @@
-from github import Github
-import json
+import requests
 import os
+import json
 
-# Connect to GitHub
-token = os.getenv("GITHUB_TOKEN")
-g = Github(token)
+# GitHub Token من Jenkins Environment
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+# المنظمة أو اليوزر اللي عايزة تجيبي منه الريبو
+ORG = "kubernetes"   # ممكن تغيريها لأي org أو user كبير
 
-# Search for repos about service discovery
-query = "service discovery architecture"
-result = g.search_repositories(query, sort="stars", order="desc")
+# المسار اللي هيتحفظ فيه الداتا
+OUTPUT_FILE = "github_repos.json"
 
-repos_data = []
-for repo in result[:200]:  # هنجمع أول 200 Repo
-    repos_data.append({
-        "name": repo.full_name,
-        "description": repo.description,
-        "url": repo.html_url,
-        "stars": repo.stargazers_count
-    })
+def fetch_repos():
+    all_repos = []
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
 
-with open("github_repos.json", "w", encoding="utf-8") as f:
-    json.dump(repos_data, f, indent=4, ensure_ascii=False)
+    # نجيب لحد 1000 repo (10 صفحات × 100 repo)
+    for page in range(1, 11):
+        url = f"https://api.github.com/orgs/{ORG}/repos?per_page=100&page={page}"
+        print(f"📡 Fetching: {url}")
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
 
-print("✅ GitHub data fetched into github_repos.json")
+        if not data:  # لو الصفحة فاضية يبطل
+            break
+
+        for repo in data:
+            all_repos.append({
+                "name": repo["name"],
+                "full_name": repo["full_name"],
+                "description": repo.get("description") or "",
+                "html_url": repo["html_url"]
+            })
+
+    return all_repos
+
+
+def main():
+    repos = fetch_repos()
+    print(f"✅ تم جلب {len(repos)} repos من GitHub")
+
+    with open(OUTPUT_FILE, "w") as f:
+        json.dump(repos, f, indent=2, ensure_ascii=False)
+
+    print(f"💾 تم حفظ الداتا في {OUTPUT_FILE}")
+
+
+if __name__ == "__main__":
+    main()
