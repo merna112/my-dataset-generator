@@ -2,31 +2,31 @@ pipeline {
     agent any
 
     stages {
-        stage('1. Preparing Environment') {
+        stage('Install System Dependencies') {
             steps {
-                echo 'Installing necessary Python libraries...'
+                sh 'apt-get update && apt-get install -y python3 python3-pip'
+                sh 'ln -s /usr/bin/pip3 /usr/bin/pip || true'
+            }
+        }
+        stage('Install Python Libraries') {
+            steps {
                 sh 'pip install pandas'
             }
         }
-        stage('2. Generating Smart Dataset') {
+        stage('Generate Dataset') {
             steps {
-                echo 'Executing the advanced dataset generation script...'
-                sh 'python generate_advanced_repo_dataset.py'
+                sh 'python3 generate_advanced_repo_dataset.py'
             }
         }
-        stage('3. Archiving Results') {
+        stage('Archive Dataset') {
             steps {
-                echo 'Saving the generated dataset as a build artifact...'
                 archiveArtifacts artifacts: 'advanced_evaluation_data/*.csv', followSymlinks: false
             }
         }
     }
     post {
-        success {
-            echo 'Pipeline finished successfully. Dataset is ready.'
-        }
-        failure {
-            echo 'Pipeline failed. Please check the console output.'
+        always {
+            echo "Pipeline finished with status: ${currentBuild.currentResult}"
         }
     }
 }
