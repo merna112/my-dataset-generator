@@ -20,14 +20,20 @@ RELEVANCE_LEVELS = ["high", "medium", "low"]
 def load_github_repos(path="github_repos.json"):
     with open(path, "r") as f:
         repos = json.load(f)
-    # ناخد الاسم بس ونعتبره كخدمة
     return [repo["name"] for repo in repos]
 
 def build_dataset(num_examples=NUM_EXAMPLES):
     github_services = load_github_repos()
+    available_services = len(github_services)
 
-    if len(github_services) < num_examples:
-        raise ValueError(f"⚠️ محتاج على الأقل {num_examples} خدمات مختلفة من GitHub (حاليًا {len(github_services)})")
+    print("======================================")
+    print(f"📥 Loaded {available_services} services from GitHub")
+    print("======================================")
+
+    # لو أقل من المطلوب → نشتغل بالعدد الموجود بس
+    if available_services < num_examples:
+        print(f"⚠️ Requested {num_examples} examples but only {available_services} services available")
+        num_examples = available_services
 
     dataset = []
     used_queries = set()
@@ -39,8 +45,7 @@ def build_dataset(num_examples=NUM_EXAMPLES):
         query_template = random.choice(QUERY_TEMPLATES)
         query = query_template.format(service=service)
 
-        # نضمن عدم التكرار
-        while query in used_queries:
+        while query in used_queries:  # ضمان عدم تكرار الـ queries
             query_template = random.choice(QUERY_TEMPLATES)
             query = query_template.format(service=service)
 
@@ -61,8 +66,11 @@ def build_dataset(num_examples=NUM_EXAMPLES):
     with open("service_discovery_dataset.json", "w") as f:
         json.dump(dataset, f, indent=2, ensure_ascii=False)
 
-    print(f"✅ تم إنشاء {len(dataset)} مثال وحفظهم في service_discovery_dataset.json")
-
+    print("======================================")
+    print(f"✅ Final dataset size: {len(dataset)} examples")
+    print(f"📦 Unique ground_truth values: {len(used_ground_truth)}")
+    print("======================================")
+    print("👉 Saved to service_discovery_dataset.json")
 
 if __name__ == "__main__":
     build_dataset()
