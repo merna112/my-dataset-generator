@@ -1,15 +1,9 @@
 pipeline {
     agent any
-
     stages {
-        stage('Install System Dependencies') {
+        stage('Install Dependencies') {
             steps {
                 sh 'apt-get update && apt-get install -y python3 python3-pip'
-                sh 'ln -s /usr/bin/pip3 /usr/bin/pip || true'
-            }
-        }
-        stage('Install Python Libraries') {
-            steps {
                 sh 'pip install pandas --break-system-packages'
             }
         }
@@ -20,13 +14,8 @@ pipeline {
         }
         stage('Archive Dataset') {
             steps {
-                archiveArtifacts artifacts: 'advanced_evaluation_data/*.json', followSymlinks: false
+                archiveArtifacts artifacts: 'cse_evaluation_data/*.json', followSymlinks: false
             }
-        }
-    }
-    post {
-        always {
-            echo "Pipeline finished with status: ${currentBuild.currentResult}"
         }
     }
 }
