@@ -1,75 +1,62 @@
 import requests
-import json
 import os
-
-# 📦 منظمات ضخمة عشان نجيب Repos كتير
-ORGS = [
-    "kubernetes",
-    "hashicorp",
-    "prometheus",
-    "aws",
-    "microsoft",
-    "google",
-    "apache",
-    "cncf",
-    "redhat-developer",
-    "helm",
-    "istio",
-    "spiffe",
-    "openstack"
-]
-
-MAX_PAGES = 30  # عدد الصفحات لكل org
-PER_PAGE = 100  # كل صفحة = 100 repo
-MIN_ACCEPT = 200  # أقل عدد مسموح
-OUTPUT_FILE = "github_repos.json"
+import base64
+import time
+import json
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
+
+ORGS = ["kubernetes", "hashicorp", "aws", "microsoft", "openstack", "prometheus"]
+PER_PAGE = 100
+MAX_PAGES = 15
 
 def fetch_repos(org):
     repos = []
     for page in range(1, MAX_PAGES + 1):
         url = f"https://api.github.com/orgs/{org}/repos?per_page={PER_PAGE}&page={page}"
         print(f"📡 Fetching: {url}")
-        resp = requests.get(url, headers=HEADERS)
-
-        if resp.status_code != 200:
-            print(f"⚠️ Failed to fetch from {org}, page {page}: {resp.status_code}")
+        r = requests.get(url, headers=HEADERS)
+        if r.status_code != 200:
+            print(f"⚠️ Failed to fetch {url}: {r.status_code}")
             break
-
-        data = resp.json()
+        data = r.json()
         if not data:
             break
-
         for repo in data:
-            desc = repo.get("description") or ""
-            if len(desc.strip()) > 15:  # نفلتر أي وصف قصير جدًا
-                repos.append({
-                    "org": org,
-                    "name": repo["name"],
-                    "full_name": repo["full_name"],
-                    "html_url": repo["html_url"],
-                    "description": desc.strip()
-                })
-
+            repos.append({
+                "name": repo["name"],
+                "org": org,
+                "description": repo.get("description") or ""
+            })
+        time.sleep(0.2)  # عشان الـ rate limit
     print(f"✅ {org}: {len(repos)} repos")
     return repos
 
-def main():
-    all_repos = []
-    for org in ORGS:
-        all_repos.extend(fetch_repos(org))
-
-    print(f"📦 المجموع الكلي: {len(all_repos)} repos")
-
-    if len(all_repos) < MIN_ACCEPT:
-        raise RuntimeError(f"❌ Built only {len(all_repos)} entries (<{MIN_ACCEPT}). Add more orgs or pages.")
-
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(all_repos, f, indent=2, ensure_ascii=False)
-
-    print(f"💾 تم حفظ الداتا في {OUTPUT_FILE}")
+def fetch_readme(org, repo):
+    url = f"https://api.github.com/repos/{org}/{repo}/readme"
+    r = requests.get(url, headers=HEADERS)
+    if r.status_code != 200:
+        return ""
+    try:
+        content = r.json().get("content")
+        if content:
+            return base64.b64decode(content).decode("utf-8", errors="ignore")
+    except Exception:
+        return ""
+    return ""
 
 if __name__ == "__main__":
-    main()
+    all_repos = []
+    for org in ORGS:
+        repos = fetch_repos(org)
+        for r in repos:
+            r["readme"] = fetch_readme(r["org"], r["name"])
+            all_repos.append(r)
+            time.sleep(0.2)
+    print(f"📦 المجموع الكلي: {len(all_repos)} repos")
+
+    with open("github_repos.json", "w") as f:
+        json.dump(all_repos, f, indent=2, ensure_ascii=False)
+
+    print("💾 تم حفظ الداتا في github_repos.json")
