@@ -1,9 +1,8 @@
-import pandas as pd
 import random
 import json
 
 def generate_dataset(num_queries_per_category=70):
-    # Extended lists for more variety and longer descriptions
+    # --- Data for Generation (English) ---
     jenkins_concepts = [
         "CI/CD pipeline automation", "Continuous Integration", "Continuous Delivery",
         "Automated testing", "Deployment automation", "Code quality analysis",
@@ -68,7 +67,6 @@ def generate_dataset(num_queries_per_category=70):
         {"name": "Sidebar Link Plugin", "desc": "for adding custom links to the Jenkins sidebar.", "use_case": "adding quick links to external tools."}
     ]
 
-    # Extended lists for query generation
     actions = [
         "automate", "integrate", "monitor", "optimize", "manage", "secure", "deploy", "build", "test",
         "track", "customize", "organize", "scale", "send notifications", "analyze", "clean up",
@@ -126,15 +124,14 @@ def generate_dataset(num_queries_per_category=70):
         "How can I improve {jenkins_concept} to avoid {problem} and achieve {goal} in the context of {context}?"
     ]
 
+    # --- Generation Logic ---
     data = []
     generated_queries = set()
     generated_ground_truths = set()
 
-    # Function to generate a unique query and ground truth
     def generate_unique_entry(relevance_category, plugins_list):
-        max_attempts = 1000 # Prevent infinite loops for very restrictive conditions
-        attempts = 0
-        while attempts < max_attempts:
+        max_attempts = 1000
+        for _ in range(max_attempts):
             concept = random.choice(jenkins_concepts)
             action = random.choice(actions)
             problem = random.choice(problems)
@@ -145,65 +142,52 @@ def generate_dataset(num_queries_per_category=70):
             query = random.choice(query_templates).format(
                 action=action, jenkins_concept=concept, problem=problem, goal=goal, context=context
             )
-            # Ensure query is long enough and unique
-            if len(query) < 100 or query in generated_queries:
-                attempts += 1
-                continue
 
-            ground_truth = f"Using {plugin_info[\'name\']} {plugin_info[\'desc\']} This will help you with {plugin_info[\'use_case\']} to {action} {concept} and achieve {goal}."
-            # Ensure ground truth is long enough and unique
-            if len(ground_truth) < 100 or ground_truth in generated_ground_truths:
-                attempts += 1
-                continue
+            # **FIX APPLIED HERE**
+            # Extract dictionary values into variables first
+            plugin_name = plugin_info["name"]
+            plugin_desc = plugin_info["desc"]
+            plugin_use_case = plugin_info["use_case"]
 
-            generated_queries.add(query)
-            generated_ground_truths.add(ground_truth)
-            return {"query": query, "ground_truth": ground_truth, "relevance": relevance_category}
-        return None # Return None if unable to generate a unique entry after max_attempts
+            # Use the simple variables in the f-string to avoid syntax errors
+            ground_truth = f"Using {plugin_name} {plugin_desc} This will help you with {plugin_use_case} to {action} {concept} and achieve {goal}."
 
-    # Generate entries for each category
-    # Aim for slightly more than needed to ensure we hit the 200+ mark and have enough for shuffling
-    target_per_category = max(num_queries_per_category, 70) # Ensure at least 70 per category for 210 total
+            if len(query) > 100 and query not in generated_queries and len(ground_truth) > 100 and ground_truth not in generated_ground_truths:
+                generated_queries.add(query)
+                generated_ground_truths.add(ground_truth)
+                return {"query": query, "ground_truth": ground_truth, "relevance": relevance_category}
+        return None
 
-    high_entries = []
-    medium_entries = []
-    low_entries = []
+    # --- Main Execution ---
+    all_entries = []
+    categories = {
+        "high": common_plugins_high,
+        "medium": common_plugins_medium,
+        "low": common_plugins_low
+    }
 
-    for _ in range(target_per_category):
-        entry = generate_unique_entry("high", common_plugins_high)
-        if entry: high_entries.append(entry)
-
-        entry = generate_unique_entry("medium", common_plugins_medium)
-        if entry: medium_entries.append(entry)
-
-        entry = generate_unique_entry("low", common_plugins_low)
-        if entry: low_entries.append(entry)
+    for relevance, plugins in categories.items():
+        count = 0
+        while count < num_queries_per_category:
+            entry = generate_unique_entry(relevance, plugins)
+            if entry:
+                all_entries.append(entry)
+                count += 1
 
     # Ensure at least 4 of each category are present
-    while len(high_entries) < 4:
-        entry = generate_unique_entry("high", common_plugins_high)
-        if entry: high_entries.append(entry)
+    for relevance, plugins in categories.items():
+        while sum(1 for d in all_entries if d["relevance"] == relevance) < 4:
+            entry = generate_unique_entry(relevance, plugins)
+            if entry:
+                all_entries.append(entry)
 
-    while len(medium_entries) < 4:
-        entry = generate_unique_entry("medium", common_plugins_medium)
-        if entry: medium_entries.append(entry)
+    random.shuffle(all_entries)
 
-    while len(low_entries) < 4:
-        entry = generate_unique_entry("low", common_plugins_low)
-        if entry: low_entries.append(entry)
-
-    data = high_entries + medium_entries + low_entries
-
-    # Shuffle the dataset
-    random.shuffle(data)
-
-    # Save to JSON
     output_filename = "jenkins_service_discovery_dataset.json"
     with open(output_filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Dataset generated successfully with {len(data)} entries. Saved to {output_filename}")
+        json.dump(all_entries, f, ensure_ascii=False, indent=4)
+    
+    print(f"Dataset generated successfully with {len(all_entries)} entries. Saved to {output_filename}")
 
 if __name__ == "__main__":
-    # To get more than 200 queries, ensure num_queries_per_category * 3 > 200
-    # For example, 70 * 3 = 210 queries. This value is passed to the function.
     generate_dataset(num_queries_per_category=70)
