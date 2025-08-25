@@ -20,7 +20,7 @@ pipeline {
         }
         stage('Archive Dataset') {
             steps {
-                archiveArtifacts artifacts: 'advanced_evaluation_data/*.csv', followSymlinks: false
+                archiveArtifacts artifacts: 'advanced_evaluation_data/*.json', followSymlinks: false
             }
         }
     }
