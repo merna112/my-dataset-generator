@@ -1,41 +1,58 @@
-import json
-import sys
+import json, sys, os, re
 
-with open("service_discovery_dataset.json", "r", encoding="utf-8") as f:
-    dataset = json.load(f)
+IN = "service_discovery_dataset.json"
 
-queries = set()
-truths = set()
-errors = []
+def main():
+    if not os.path.exists(IN):
+        print(f"❌ {IN} not found")
+        sys.exit(1)
+    with open(IN, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-for i, entry in enumerate(dataset, 1):
-    q = entry.get("query")
-    gt = entry.get("ground_truth")
-    high = entry.get("high_relevance", [])
-    medium = entry.get("medium_relevance", [])
-    low = entry.get("low_relevance", [])
+    errs = []
+    seen_q = set()
+    seen_gt = set()
+    seen_rel = set()
 
-    # تحقق من uniqueness
-    if q in queries:
-        errors.append(f"[Entry {i}] Duplicate query: {q}")
-    if gt in truths:
-        errors.append(f"[Entry {i}] Duplicate ground_truth: {gt}")
+    for i, x in enumerate(data, 1):
+        # counts
+        if len(x.get("high_relevance",[])) != 4:
+            errs.append(f"[Entry {i}] High relevance count != 4")
+        if len(x.get("medium_relevance",[])) != 4:
+            errs.append(f"[Entry {i}] Medium relevance count != 4")
+        if len(x.get("low_relevance",[])) != 4:
+            errs.append(f"[Entry {i}] Low relevance count != 4")
 
-    queries.add(q)
-    truths.add(gt)
+        # lengths
+        q = x.get("query","").strip()
+        d = x.get("description","").strip()
+        gt = x.get("ground_truth","").strip()
 
-    # تحقق من العدد
-    if len(high) != 4:
-        errors.append(f"[Entry {i}] High relevance count != 4")
-    if len(medium) != 4:
-        errors.append(f"[Entry {i}] Medium relevance count != 4")
-    if len(low) != 4:
-        errors.append(f"[Entry {i}] Low relevance count != 4")
+        if len(q) < 60: errs.append(f"[Entry {i}] Query too short")
+        if len(gt) < 160: errs.append(f"[Entry {i}] Ground truth too short")
+        if "-" in gt: errs.append(f"[Entry {i}] Ground truth must not contain '-'")
 
-if errors:
-    print("❌ Validation failed with errors:")
-    for e in errors:
-        print(" -", e)
-    sys.exit(1)
-else:
-    print(f"✅ Validation passed: {len(dataset)} entries, all unique and well-formed.")
+        # uniqueness
+        if q in seen_q: errs.append(f"[Entry {i}] Duplicate query")
+        seen_q.add(q)
+
+        if gt in seen_gt: errs.append(f"[Entry {i}] Duplicate ground_truth")
+        seen_gt.add(gt)
+
+        for sec in ("high_relevance","medium_relevance","low_relevance"):
+            for s in x.get(sec,[]):
+                s = s.strip()
+                if s in seen_rel:
+                    errs.append(f"[Entry {i}] Duplicate relevance sentence across dataset")
+                seen_rel.add(s)
+
+    if errs:
+        print("❌ Validation failed with errors:")
+        for e in errs[:200]:
+            print(" -", e)
+        sys.exit(1)
+    else:
+        print(f"✅ Validation passed for {len(data)} entries.")
+
+if __name__ == "__main__":
+    main()
