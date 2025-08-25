@@ -30,4 +30,3 @@ pipeline {
         }
     }
 }
-```4.  اضغط `Commit changes`.
