@@ -10,7 +10,7 @@ pipeline {
         }
         stage('Install Python Libraries') {
             steps {
-                sh 'pip install pandas'
+                sh 'pip install pandas --break-system-packages'
             }
         }
         stage('Generate Dataset') {
@@ -30,3 +30,4 @@ pipeline {
         }
     }
 }
+```4.  اضغط `Commit changes`.
