@@ -54,8 +54,8 @@ def create_dataset_row():
         alt_domain_key = random.choice([d for d in DOMAINS if d != domain_key])
         alt_domain_info = DOMAINS[alt_domain_key]
         alt_project_type = random.choice(alt_domain_info["types"])
-        medium_relevance.add(generate_project_id(domain_key, codename, random.choice(domain_info["types"]), tech)) # Same project, different type
-        medium_relevance.add(generate_project_id(alt_domain_key, codename, alt_project_type, random.choice(alt_domain_info["tech"]))) # Same codename, different domain
+        medium_relevance.add(generate_project_id(domain_key, codename, random.choice(domain_info["types"]), tech))
+        medium_relevance.add(generate_project_id(alt_domain_key, codename, alt_project_type, random.choice(alt_domain_info["tech"])))
         medium_relevance.discard(ground_truth)
 
     low_relevance = set()
@@ -71,29 +71,30 @@ def create_dataset_row():
         "query": query,
         "service_description": description,
         "ground_truth": ground_truth,
-        "high_relevance": json.dumps(list(high_relevance)[:4]),
-        "medium_relevance": json.dumps(list(medium_relevance)[:4]),
-        "low_relevance": json.dumps(list(low_relevance)[:4]),
+        "high_relevance": list(high_relevance)[:4],
+        "medium_relevance": list(medium_relevance)[:4],
+        "low_relevance": list(low_relevance)[:4],
     }
 
 def main():
     print("Generating the most advanced evaluation dataset for Project Repository Search...")
     
     dataset = [create_dataset_row() for _ in range(NUM_QUERIES)]
-    df = pd.DataFrame(dataset)
-
+    
     output_dir = 'advanced_evaluation_data'
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
-    output_path = os.path.join(output_dir, 'project_repo_queries.csv')
-    df.to_csv(output_path, index=False)
+    output_path = os.path.join(output_dir, 'project_repo_queries.json')
+    
+    with open(output_path, 'w') as f:
+        json.dump(dataset, f, indent=4)
     
     print("\nDataset generation complete.")
     print(f"File saved at: {output_path}")
-    print(f"Total unique queries generated: {len(df)}")
-    print("\nSample of the first 5 rows:")
-    print(df.head().to_string())
+    print(f"Total unique queries generated: {len(dataset)}")
+    print("\nSample of the first record:")
+    print(json.dumps(dataset[0], indent=4))
 
 if __name__ == "__main__":
     main()
