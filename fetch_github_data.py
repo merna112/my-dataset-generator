@@ -1,62 +1,55 @@
 import requests
-import os
-import base64
-import time
 import json
+import time
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-HEADERS = {"Authorization": f"token {GITHUB_TOKEN}"} if GITHUB_TOKEN else {}
+# Org names (قليلة عشان تبقي أسرع)
+ORGS = ["kubernetes", "hashicorp", "prometheus", "aws", "openstack", "microsoft"]
 
-ORGS = ["kubernetes", "hashicorp", "aws", "microsoft", "openstack", "prometheus"]
-PER_PAGE = 100
-MAX_PAGES = 15
+# أقصى عدد صفحات هنجيبها من كل org
+MAX_PAGES = 5   # كل صفحة = 100 repo -> 500 repo لكل org
 
-def fetch_repos(org):
+# عشان تقللي الوقت -> مش هنجيب README
+INCLUDE_README = False  
+
+# Authentication (لو عندك GitHub token)
+TOKEN = None  # ضيفي التوكين هنا لو عايزة تزودي السرعة
+HEADERS = {"Authorization": f"token {TOKEN}"} if TOKEN else {}
+
+def fetch_repos(org, per_page=100):
     repos = []
     for page in range(1, MAX_PAGES + 1):
-        url = f"https://api.github.com/orgs/{org}/repos?per_page={PER_PAGE}&page={page}"
+        url = f"https://api.github.com/orgs/{org}/repos?per_page={per_page}&page={page}"
         print(f"📡 Fetching: {url}")
         r = requests.get(url, headers=HEADERS)
         if r.status_code != 200:
-            print(f"⚠️ Failed to fetch {url}: {r.status_code}")
+            print(f"⚠️ Failed for {org}, page {page}")
             break
         data = r.json()
         if not data:
             break
         for repo in data:
             repos.append({
-                "name": repo["name"],
                 "org": org,
-                "description": repo.get("description") or ""
+                "name": repo.get("name"),
+                "description": repo.get("description") or "No description available",
+                "url": repo.get("html_url")
             })
-        time.sleep(0.2)  # عشان الـ rate limit
-    print(f"✅ {org}: {len(repos)} repos")
+        time.sleep(0.1)  # صغير جدًا، أسرع
     return repos
 
-def fetch_readme(org, repo):
-    url = f"https://api.github.com/repos/{org}/{repo}/readme"
-    r = requests.get(url, headers=HEADERS)
-    if r.status_code != 200:
-        return ""
-    try:
-        content = r.json().get("content")
-        if content:
-            return base64.b64decode(content).decode("utf-8", errors="ignore")
-    except Exception:
-        return ""
-    return ""
-
-if __name__ == "__main__":
+def main():
     all_repos = []
     for org in ORGS:
         repos = fetch_repos(org)
-        for r in repos:
-            r["readme"] = fetch_readme(r["org"], r["name"])
-            all_repos.append(r)
-            time.sleep(0.2)
+        print(f"✅ {org}: {len(repos)} repos")
+        all_repos.extend(repos)
+
     print(f"📦 المجموع الكلي: {len(all_repos)} repos")
 
     with open("github_repos.json", "w") as f:
-        json.dump(all_repos, f, indent=2, ensure_ascii=False)
+        json.dump(all_repos, f, indent=2)
 
     print("💾 تم حفظ الداتا في github_repos.json")
+
+if __name__ == "__main__":
+    main()
