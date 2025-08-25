@@ -1,24 +1,27 @@
 pipeline {
     agent any
+
     stages {
-        stage('Install Dependencies') {
+        stage('Generate Semantic Dataset') {
             steps {
-                sh 'apt-get update && apt-get install -y python3 python3-pip'
-                sh 'pip install pandas --break-system-packages'
+                // لم نعد بحاجة لتثبيت أي مكتبات خارجية
+                // السكريبت الآن يعتمد فقط على مكتبات بايثون الأساسية
+                sh 'python3 generate_semantic_dataset.py'
             }
         }
-        stage('Generate and Debug Dataset') {
+        stage('Archive Dataset') {
             steps {
-                // شغّل السكريبت واكتب كل مخرجاته وأخطائه في ملف اسمه script.log
-                sh 'python3 generate_service_discovery_dataset.py > script.log 2>&1'
+                // تأكد من أن اسم المجلد هنا مطابق لما هو مكتوب في السكريبت
+                archiveArtifacts artifacts: 'service_discovery_semantic_data/*.json', allowEmptyArchive: false
             }
         }
-        stage('Display Log and Archive') {
-            steps {
-                // اعرض محتويات ملف السجل لنرى الخطأ الحقيقي
-                sh 'cat script.log'
-                archiveArtifacts artifacts: 'service_discovery_data/*.json', allowEmptyArchive: true
-            }
+    }
+    post {
+        success {
+            echo "Pipeline finished successfully. The semantic dataset is ready in the build artifacts."
+        }
+        failure {
+            echo "Pipeline failed. Please check the console output for errors."
         }
     }
 }
