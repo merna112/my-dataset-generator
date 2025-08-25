@@ -1,78 +1,94 @@
 import json
 import random
+from pathlib import Path
 
-INPUT_FILE = "github_repos.json"
-OUTPUT_FILE = "service_discovery_dataset.json"
+MIN_ACCEPT = 200   # أقل عدد مطلوب
+MAX_ENTRIES = 250  # أقصى عدد
 
-NUM_ENTRIES = 210  # العدد المطلوب
-
-def load_repos():
-    with open(INPUT_FILE, "r", encoding="utf-8") as f:
+def load_repos(path="github_repos.json"):
+    with open(path, "r") as f:
         return json.load(f)
 
-def build_dataset():
-    repos = load_repos()
-    random.shuffle(repos)
-
+def build_dataset(repos):
     dataset = []
     used_queries = set()
+    used_truths = set()
+
+    # Shuffle to get diversity
+    random.shuffle(repos)
 
     for repo in repos:
-        desc = repo["description"]
-        if not desc or len(desc.split()) < 6:
+        name = repo["name"]
+        org = repo.get("org", "")
+        desc = repo.get("description", "").strip()
+        readme = repo.get("readme", "").strip()
+        topics = set(repo.get("topics", []))
+
+        if not desc:
             continue
 
-        # query = جزء من الوصف (أول جملة أو أول 12 كلمة)
-        query = " ".join(desc.split()[:12])
-        if query in used_queries:
+        # query = first sentence from desc or readme
+        query = (desc.split(".")[0] if desc else readme.split(".")[0]).strip()
+        if not query or query in used_queries:
             continue
-        used_queries.add(query)
 
-        # description = الوصف الأصلي من GitHub
+        # description = raw GitHub description
         description = desc
 
-        # ground_truth = الوصف كامل + جملة إضافية للتوسيع
-        ground_truth = (
-            f"{desc} This project provides extended service discovery, "
-            f"configuration, and integration features that scale across "
-            f"cloud-native and hybrid infrastructures."
-        )
+        # ground_truth = longer (description + optional details)
+        ground_truth = f"{desc}. This repository, {name}, is maintained under the {org} organization and provides production-grade features with active community support."
 
-        # high/medium/low relevance (نولّد من repos تانية عشان التنوع)
-        other_repos = [r for r in repos if r["name"] != repo["name"]]
-        random.shuffle(other_repos)
-
-        high = [f"{r['name']} works closely with {repo['name']} to enhance discovery and integration workflows."
-                for r in other_repos[:4]]
-
-        medium = [f"{r['name']} provides related capabilities but diverges in focus compared to {repo['name']}."
-                  for r in other_repos[4:8]]
-
-        low = [f"{r['name']} is mainly about {r['description']} and has no direct link to {repo['name']}."
-               for r in other_repos[8:12]]
-
-        if len(high) < 4 or len(medium) < 4 or len(low) < 4:
+        if ground_truth in used_truths:
             continue
 
-        dataset.append({
-            "query": query,
-            "description": description,
-            "ground_truth": ground_truth,
-            "high_relevance": high,
-            "medium_relevance": medium,
-            "low_relevance": low
-        })
+        # High relevance = 4 repos from same org
+        high = [
+            f"{r['name']} integrates closely with {name} to provide complementary functionality within {org} ecosystem."
+            for r in repos if r.get("org") == org and r["name"] != name
+        ]
+        high = high[:4]
 
-        if len(dataset) >= NUM_ENTRIES:
+        # Medium relevance = 4 repos sharing topics
+        medium = [
+            f"{r['name']} addresses similar areas to {name}, overlapping partly on topics like {', '.join(r.get('topics', []))}."
+            for r in repos if r["name"] != name and topics.intersection(r.get("topics", []))
+        ]
+        medium = medium[:4]
+
+        # Low relevance = 4 random repos with no overlap
+        low_candidates = [r for r in repos if r["name"] != name and not topics.intersection(r.get("topics", [])) and r.get("org") != org]
+        random.shuffle(low_candidates)
+        low = [
+            f"{r['name']} is primarily focused on unrelated functionality ({r.get('description','unrelated project')})."
+            for r in low_candidates[:4]
+        ]
+
+        # Ensure structure 4/4/4
+        if len(high) == 4 and len(medium) == 4 and len(low) == 4:
+            dataset.append({
+                "query": query,
+                "description": description,
+                "ground_truth": ground_truth,
+                "high_relevance": high,
+                "medium_relevance": medium,
+                "low_relevance": low
+            })
+            used_queries.add(query)
+            used_truths.add(ground_truth)
+
+        if len(dataset) >= MAX_ENTRIES:
             break
 
-    if len(dataset) < NUM_ENTRIES:
-        raise RuntimeError(f"❌ Only built {len(dataset)} entries (<{NUM_ENTRIES})")
+    if len(dataset) < MIN_ACCEPT:
+        raise RuntimeError(f"❌ Built only {len(dataset)} entries (<{MIN_ACCEPT}). Add more orgs or pages.")
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(dataset, f, indent=2, ensure_ascii=False)
-
-    print(f"✅ Dataset built with {len(dataset)} entries → {OUTPUT_FILE}")
+    return dataset
 
 if __name__ == "__main__":
-    build_dataset()
+    repos = load_repos()
+    dataset = build_dataset(repos)
+
+    with open("service_discovery_dataset.json", "w") as f:
+        json.dump(dataset, f, indent=2, ensure_ascii=False)
+
+    print(f"✅ Built {len(dataset)} entries and saved to service_discovery_dataset.json")
