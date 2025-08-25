@@ -1,63 +1,57 @@
 import json
 import random
 
-# الحد الأقصى للأمثلة
-NUM_EXAMPLES = 250
+# عدد الأمثلة المطلوب
+NUM_EXAMPLES = 210  # ممكن تزود لـ 250 لو عندك repos كفاية
 
-# قوالب Queries (مش كلها أسئلة)
+# قوالب Queries (مش كلها أسئلة عشان التنويع)
 QUERY_TEMPLATES = [
-    "Looking into integrating {service} as part of our platform services",
-    "We are exploring solutions around {service} in cloud-native workflows",
-    "Trying to evaluate best practices for {service} management",
-    "Planning to extend system capabilities with {service}",
-    "Searching for reliable technologies to cover {service} at scale",
-    "Our architecture requires a solid approach to {service}",
-    "Considering migration paths that involve {service}",
-    "We want to benchmark different tools for {service}"
+    "We are integrating {service} into our architecture and need the most resilient option.",
+    "Adding {service} support is becoming critical for scaling our distributed system.",
+    "Our infrastructure depends heavily on {service}, so we are looking for the most reliable solution.",
+    "We want a discovery-ready tool to automate how {service} is managed in production.",
+    "Ensuring smooth adoption of {service} without downtime is our top priority.",
+    "To improve observability, we are searching for a scalable solution for {service}.",
+    "Dynamic scaling requires a self-healing service for {service}.",
+    "The team is planning to expand workloads and needs {service} integration with discovery.",
 ]
 
-# أوصاف للخدمات
-DESCRIPTION_TEMPLATES = [
-    "This service is designed to improve scalability and fault-tolerance in distributed systems.",
-    "It provides advanced automation capabilities suitable for large-scale enterprise operations.",
-    "Known for its strong community support and frequent updates, making it reliable in production.",
-    "It integrates seamlessly with CI/CD pipelines and modern DevOps practices.",
-    "The service emphasizes security, monitoring, and compliance features for regulated environments.",
-    "It is optimized for high throughput and low latency workloads across different clusters.",
-    "Flexibility and modularity make it adaptable to various deployment scenarios.",
-    "Often recommended for teams adopting microservices and containerized applications."
+# قوالب ground_truth
+GROUND_TRUTH_TEMPLATES = [
+    "This service provides a highly scalable and production-ready implementation of {service}, ensuring seamless integration with microservices and discovery systems.",
+    "A distributed platform designed specifically to handle {service} in dynamic, large-scale environments, guaranteeing automation and reliability.",
+    "This tool offers fault tolerance and self-healing mechanisms for {service}, making it ideal for modern service discovery workloads.",
+    "A solution that enables zero-downtime updates for {service}, powered by strong consensus and adaptive scaling features.",
+    "This framework is widely adopted for managing {service} and integrates natively with Kubernetes, cloud, and on-premise infrastructures.",
 ]
 
-# توليد relevance طويلة (٤ عناصر)
-def generate_relevance(service, level):
-    base_text = {
-        "high": f"Highly suitable for production-grade usage of {service}, offering robust reliability, scalability, and security features.",
-        "medium": f"Moderately useful for {service}, fits well in certain contexts but may lack some advanced capabilities.",
-        "low": f"Not generally recommended for critical {service} tasks, as it might have limited stability or ecosystem support."
-    }
+# قوالب relevance (كل مستوى ليه 6 قوالب عشان التنويع)
+HIGH_RELEVANCE_TEMPLATES = [
+    "It directly supports {service} in distributed service discovery scenarios with high reliability.",
+    "This option ensures automation and smooth scaling for {service} without manual intervention.",
+    "It is designed for production-grade deployments where {service} is mission critical.",
+    "Consensus-driven design makes it highly aligned with {service} in discovery workloads.",
+    "Proven in production environments with large-scale use of {service}.",
+    "Fault tolerance and high availability make it perfect for {service} integration.",
+]
 
-    expansions = {
-        "high": [
-            "Strong ecosystem adoption and proven track record in enterprise deployments.",
-            "Seamless integrations with monitoring, logging, and orchestration layers.",
-            "Performance benchmarks consistently show excellent resource efficiency.",
-            "Comprehensive documentation and active community ensuring continuous improvements."
-        ],
-        "medium": [
-            "Good option for smaller teams experimenting with {service}.",
-            "Covers most essential requirements but lacks advanced optimizations.",
-            "Integration paths exist but require additional setup effort.",
-            "Community support is available but not as strong as leading alternatives."
-        ],
-        "low": [
-            "Minimal adoption outside niche scenarios makes it risky for production.",
-            "Missing core features required for complex {service} workloads.",
-            "Documentation and updates are sparse, leading to potential maintenance issues.",
-            "Few integrations with mainstream DevOps or observability tools."
-        ]
-    }
+MEDIUM_RELEVANCE_TEMPLATES = [
+    "It partially supports {service}, but requires external plugins for full discovery integration.",
+    "Scaling {service} is possible but may need additional manual setup.",
+    "It offers some discovery capabilities but lacks native hooks for {service}.",
+    "Can handle workloads with {service}, though resilience is limited.",
+    "Designed with observability in mind but only partially suitable for {service}.",
+    "Reliable for staging but not always production-ready for {service}.",
+]
 
-    return [base_text[level]] + [exp.format(service=service) for exp in expansions[level]]
+LOW_RELEVANCE_TEMPLATES = [
+    "This tool focuses mainly on CI/CD pipelines, not related to {service}.",
+    "It is built for database management, unrelated to {service} in discovery systems.",
+    "The solution emphasizes security scanning, not supporting {service}.",
+    "Its main purpose is orchestration of storage, not {service}.",
+    "Optimized for analytics pipelines but not suitable for {service} use cases.",
+    "Has nothing to do with {service} or service discovery in distributed systems.",
+]
 
 def load_github_repos(path="github_repos.json"):
     with open(path, "r") as f:
@@ -66,43 +60,54 @@ def load_github_repos(path="github_repos.json"):
 
 def build_dataset(num_examples=NUM_EXAMPLES):
     github_services = load_github_repos()
-    available_services = len(github_services)
 
-    if available_services < 200:
-        raise ValueError(f"⚠️ محتاج على الأقل 200 خدمة من GitHub (حاليًا {available_services})")
-
-    dataset_size = min(num_examples, available_services)
-    random.shuffle(github_services)
+    if len(github_services) < num_examples:
+        raise ValueError(f"⚠️ محتاج على الأقل {num_examples} خدمات (حاليًا {len(github_services)})")
 
     dataset = []
     used_queries = set()
+    used_ground_truth = set()
 
-    for service in github_services[:dataset_size]:
-        # نضمن query مختلفة
+    random.shuffle(github_services)
+
+    for service in github_services[:num_examples]:
+        # query
         query_template = random.choice(QUERY_TEMPLATES)
         query = query_template.format(service=service)
         while query in used_queries:
-            query_template = random.choice(QUERY_TEMPLATES)
-            query = query_template.format(service=service)
+            query = random.choice(QUERY_TEMPLATES).format(service=service)
 
-        description = random.choice(DESCRIPTION_TEMPLATES)
+        # description
+        description = f"The user is seeking a discovery-friendly solution that integrates {service} with scalability, resilience, and automation."
 
-        entry = {
+        # ground_truth
+        gt_template = random.choice(GROUND_TRUTH_TEMPLATES)
+        ground_truth = gt_template.format(service=service)
+        while ground_truth in used_ground_truth:
+            ground_truth = random.choice(GROUND_TRUTH_TEMPLATES).format(service=service)
+
+        # relevance
+        high_relevance = random.sample(HIGH_RELEVANCE_TEMPLATES, 4)
+        medium_relevance = random.sample(MEDIUM_RELEVANCE_TEMPLATES, 4)
+        low_relevance = random.sample(LOW_RELEVANCE_TEMPLATES, 4)
+
+        dataset.append({
             "query": query,
             "description": description,
-            "ground_truth": service,
-            "high_relevance": generate_relevance(service, "high"),
-            "medium_relevance": generate_relevance(service, "medium"),
-            "low_relevance": generate_relevance(service, "low")
-        }
+            "ground_truth": ground_truth,
+            "high_relevance": [r.format(service=service) for r in high_relevance],
+            "medium_relevance": [r.format(service=service) for r in medium_relevance],
+            "low_relevance": [r.format(service=service) for r in low_relevance],
+        })
 
-        dataset.append(entry)
         used_queries.add(query)
+        used_ground_truth.add(ground_truth)
 
+    # حفظ الملف
     with open("service_discovery_dataset.json", "w") as f:
         json.dump(dataset, f, indent=2, ensure_ascii=False)
 
-    print(f"✅ تم إنشاء {len(dataset)} مثال وحفظهم في service_discovery_dataset.json")
+    print(f"✅ تم إنشاء {len(dataset)} entries فـ service_discovery_dataset.json بدون أي تكرار.")
 
 if __name__ == "__main__":
     build_dataset()
