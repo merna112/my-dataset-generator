@@ -6,21 +6,31 @@ pipeline {
     }
 
     stages {
-        stage('Install dependencies') {
+        stage('Setup venv') {
             steps {
-                sh 'pip3 install --user -r requirements.txt'
+                sh '''
+                    python3 -m venv venv
+                    . venv/bin/activate
+                    pip install -r requirements.txt
+                '''
             }
         }
 
         stage('Fetch Data from GitHub') {
             steps {
-                sh 'python3 fetch_github_data.py'
+                sh '''
+                    . venv/bin/activate
+                    python fetch_github_data.py
+                '''
             }
         }
 
         stage('Build Dataset') {
             steps {
-                sh 'python3 build_dataset.py'
+                sh '''
+                    . venv/bin/activate
+                    python build_dataset.py
+                '''
             }
         }
 
