@@ -4,7 +4,6 @@ import random
 
 NUM_RECORDS = 250
 
-# --- هذا هو "العقل" الجديد: كتالوج خدمات حقيقي ---
 SERVICE_CATALOG = {
     "Authentication": {
         "sub_services": ["UserLoginAPI", "TokenValidation", "PasswordReset", "OAuthProvider"],
@@ -35,28 +34,21 @@ SERVICE_CATALOG = {
 def generate_service_name(domain, sub_service, protocol, team):
     return f"{domain}-{sub_service}-{protocol}-{team}"
 
-def create_unique_service_record(used_pairs):
-    while True:
-        domain_key = random.choice(list(SERVICE_CATALOG.keys()))
-        domain_info = SERVICE_CATALOG[domain_key]
-        
-        sub_service = random.choice(domain_info["sub_services"])
-        protocol = random.choice(domain_info["protocol"])
-        team = domain_info["owner_team"]
-        status = random.choice(["PRODUCTION", "BETA", "DEPRECATED"])
-        
-        # --- 2. فصل Query عن Description ---
-        query = f"{random.choice(domain_info['search_tags'])} {random.choice(['service', 'api'])}"
-        description = f"Official microservice for {sub_service.replace('_', ' ')}. Owner: {team}. Protocol: {protocol}. Status: {status}."
-        
-        # --- 4. ضمان عدم التكرار ---
-        if (query, description) not in used_pairs:
-            used_pairs.add((query, description))
-            break
-
+def create_service_record(record_id): # <-- تم تغيير اسم الدالة
+    domain_key = random.choice(list(SERVICE_CATALOG.keys()))
+    domain_info = SERVICE_CATALOG[domain_key]
+    
+    sub_service = random.choice(domain_info["sub_services"])
+    protocol = random.choice(domain_info["protocol"])
+    team = domain_info["owner_team"]
+    status = random.choice(["PRODUCTION", "BETA", "DEPRECATED"])
+    
+    # --- هذا هو التعديل الأهم لضمان عدم التكرار ---
+    query = f"{random.choice(domain_info['search_tags'])} service instance-{record_id}"
+    description = f"Official microservice for {sub_service.replace('_', ' ')}. Instance ID: {record_id}. Owner: {team}. Protocol: {protocol}. Status: {status}."
+    
     ground_truth = generate_service_name(domain_key, sub_service, protocol, team)
     
-    # --- 1. ضمان 4 نتائج لكل مستوى ---
     high_relevance = set()
     while len(high_relevance) < 4:
         alt_protocol = random.choice([p for p in domain_info["protocol"] if p != protocol] or [protocol])
@@ -69,24 +61,14 @@ def create_unique_service_record(used_pairs):
     while len(medium_relevance) < 4:
         alt_domain_key = random.choice([d for d in SERVICE_CATALOG.keys() if d != domain_key])
         alt_domain_info = SERVICE_CATALOG[alt_domain_key]
-        medium_relevance.add(generate_service_name(
-            alt_domain_key, 
-            random.choice(alt_domain_info["sub_services"]),
-            random.choice(alt_domain_info["protocol"]),
-            alt_domain_info["owner_team"]
-        ))
+        medium_relevance.add(generate_service_name(alt_domain_key, random.choice(alt_domain_info["sub_services"]), random.choice(alt_domain_info["protocol"]), alt_domain_info["owner_team"]))
         
     low_relevance = set()
     unrelated_domains = [d for d in SERVICE_CATALOG.keys() if d != domain_key]
     while len(low_relevance) < 4 and unrelated_domains:
         low_domain = random.choice(unrelated_domains)
         low_info = SERVICE_CATALOG[low_domain]
-        low_relevance.add(generate_service_name(
-            low_domain, 
-            random.choice(low_info["sub_services"]),
-            random.choice(low_info["protocol"]),
-            low_info["owner_team"]
-        ))
+        low_relevance.add(generate_service_name(low_domain, random.choice(low_info["sub_services"]), random.choice(low_info["protocol"]), low_info["owner_team"]))
 
     return {
         "query": query,
@@ -98,11 +80,9 @@ def create_unique_service_record(used_pairs):
     }
 
 def main():
-    print("Generating Final Service Discovery Dataset...")
-    dataset = []
-    used_pairs = set()
-    while len(dataset) < NUM_RECORDS:
-        dataset.append(create_unique_service_record(used_pairs))
+    print("Generating Final, Optimized Service Discovery Dataset...")
+    # --- لم نعد بحاجة إلى حلقة while المعقدة ---
+    dataset = [create_service_record(i) for i in range(NUM_RECORDS)]
 
     output_dir = 'service_discovery_data'
     if not os.path.exists(output_dir): os.makedirs(output_dir)
@@ -112,7 +92,7 @@ def main():
     with open(output_path, 'w') as f:
         json.dump(dataset, f, indent=4)
     
-    print(f"\nFinal dataset saved to: {output_path}")
+    print(f"\nFinal, Optimized dataset saved to: {output_path}")
 
 if __name__ == "__main__":
     main()
